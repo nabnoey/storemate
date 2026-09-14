@@ -7,7 +7,7 @@ interface ModeratorState {
   orders: OrderMod[];
   orderDetail: OrderMod[];
   products: ProductMod[];
-  // loading: boolean;
+  loading: boolean;
   totalPages: number;
 }
 
@@ -15,7 +15,7 @@ const initialState: ModeratorState = {
   orders: [],
   orderDetail: [],
   products: [],
-  // loading: false,
+  loading: false,
   totalPages: 0,
 };
 
@@ -118,8 +118,11 @@ const moderatorSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
+      .addCase(fetchAllOrders.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(fetchAllOrders.fulfilled, (state, action) => {
-        // state.loading = false;
+        state.loading = false;
         state.orders = action.payload.content;
         state.totalPages = action.payload?.totalPages;
       })
@@ -171,11 +174,14 @@ const moderatorSlice = createSlice({
             : product,
         );
       })
-
+      .addCase(getproducts.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(getproducts.fulfilled, (state, action) => {
         const items = action.payload?.data?.data;
         if (Array.isArray(items)) {
           state.products = items;
+          state.loading = false;
           const totalItems = action.payload?.data?.total || 0;
           state.totalPages = Math.ceil(totalItems / 10);
         }

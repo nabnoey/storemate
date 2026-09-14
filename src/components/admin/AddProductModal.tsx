@@ -8,7 +8,7 @@ import {
   editProduct,
   deleteProduct,
 } from "../../redux/moderator/ModeratorReducer";
-import {fetchProductById} from "../../redux/products/productReducer"
+import {fetchProductById,fetchProducts} from "../../redux/products/productReducer"
 import type {  AddProductModalProps,ProductFormValues} from "../../types/moderator/productMod";
 import type { Product, ProductImage } from "../../types/product";
 import { toast } from "react-hot-toast";
@@ -368,6 +368,7 @@ newImages.forEach((img) => {
                     editProduct({ id: product.id, data: formData }),
                   ).unwrap();
                   toast.success("แก้ไขข้อมูลสินค้าเรียบร้อยแล้ว");
+                  dispatch(fetchProducts());
                 } else {
                   await dispatch(addProduct(formData)).unwrap();
                   toast.success("เพิ่มสินค้าเรียบร้อยแล้ว", {duration: 3000});

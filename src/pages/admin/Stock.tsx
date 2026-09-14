@@ -6,8 +6,10 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../redux/store";
 import { AddProductModal } from "../../components/admin/AddProductModal";
 import { getproducts } from "../../redux/moderator/ModeratorReducer";
+// import {fetchProducts } from "../../redux/products/productReducer";
 import type { ProductMod } from "../../types/moderator/productMod";
 import { Pagination } from "../../components/admin/Pagination";
+import OwnerSkeletons from "../../components/loading/OwnerSkeletons";
 
 const categoryMap: Record<string | number, string> = {
   Promotion: "โปรโมชั่น",
@@ -17,10 +19,9 @@ const categoryMap: Record<string | number, string> = {
 };
 
 function Stock() {
-  const products = useSelector((state: RootState) => state.moderator.products);
-  const totalPages = useSelector(
-    (state: RootState) => state.moderator.totalPages,
-  );
+const { products, totalPages, loading } = useSelector(
+  (state: RootState) => state.moderator
+);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(
     searchParams.get("keyword") || "",
@@ -86,6 +87,8 @@ const handleProductSuccess = () => {
       keyword: submittedSearchTerm,
     }),
   );
+
+  // dispatch(fetchProducts())
 };
 
   return (
@@ -155,8 +158,13 @@ const handleProductSuccess = () => {
             </thead>
 
             <tbody>
-              {products.length > 0 ? (
-                products.map((product) => (
+                {loading && products.length === 0 ? (
+    <OwnerSkeletons 
+     type="mod-table"
+                      rows={PAGE_SIZE}
+                      columns={6}/>
+  ) : products.length > 0 ? (
+    products.map((product) => (
                   <tr
                     key={product.id}
                     className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"

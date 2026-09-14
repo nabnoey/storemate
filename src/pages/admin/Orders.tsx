@@ -21,6 +21,7 @@ import { CiCalendar } from "react-icons/ci";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useReactToPrint } from "react-to-print";
+import OwnerSkeletons from "../../components/loading/OwnerSkeletons";
 
 const formatDateTime = (isoString: string) => {
   if (!isoString) return { dateStr: "-", timeStr: "-" };
@@ -30,7 +31,7 @@ const formatDateTime = (isoString: string) => {
   const timeStr = `${format(date, "HH.mm")} น.`;
   return { dateStr, timeStr };
 };
-  const PAGE_SIZE = 10;
+const PAGE_SIZE = 10;
 
 function Orders() {
   const dispatch = useDispatch<AppDispatch>();
@@ -57,9 +58,9 @@ function Orders() {
   const initialPage = pageParam !== null ? Number(pageParam) + 1 : 1;
   // เก็บสถานะหน้าปัจจุบัน
   const [currentPage, setCurrentPage] = useState(initialPage);
-  const { orders, totalPages } = useSelector(
-  (state: RootState) => state.moderator
-);
+  const { orders, totalPages, loading } = useSelector(
+    (state: RootState) => state.moderator,
+  );
 
   const periodValue =
     TIME_FILTER_MAP[timeFilter as keyof typeof TIME_FILTER_MAP];
@@ -152,16 +153,16 @@ function Orders() {
     if (selectedData.length === 0) return;
 
     if (selectedData.some((order) => order.status !== "PROCESSING")) {
-  toast.error(
-    "สามารถพิมพ์ใบปะหน้าได้เฉพาะคำสั่งซื้อสถานะ 'ที่ต้องจัดส่ง' เท่านั้น",
-  );
-  return;
-}
+      toast.error(
+        "สามารถพิมพ์ใบปะหน้าได้เฉพาะคำสั่งซื้อสถานะ 'ที่ต้องจัดส่ง' เท่านั้น",
+      );
+      return;
+    }
 
     try {
-  const orderIds = selectedData.map((order) => order.id);
-  const printedLabels = await dispatch(shippingOrder(orderIds)).unwrap();
-  setPrintData(printedLabels);
+      const orderIds = selectedData.map((order) => order.id);
+      const printedLabels = await dispatch(shippingOrder(orderIds)).unwrap();
+      setPrintData(printedLabels);
     } catch {
       toast.error("ไม่สามารถอัปเดตสถานะการพิมพ์ใบปะหน้าได้");
     }
@@ -385,7 +386,13 @@ function Orders() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
-                  {orders.length > 0 ? (
+                  {loading ? (
+                    <OwnerSkeletons
+                      type="mod-table"
+                      rows={PAGE_SIZE}
+                      columns={7}
+                    />
+                  ) : orders.length > 0 ?  (
                     orders.map((order) => {
                       const { dateStr, timeStr } = formatDateTime(
                         order.createdAt || "",
