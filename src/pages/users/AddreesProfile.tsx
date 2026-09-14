@@ -31,6 +31,7 @@ const AddressProfile = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [targetAddressId, setTargetAddressId] = useState<string | null>(null);
+    const [updatingItems, setUpdatingItems] = useState<number[]>([]);
   const [isBlocking, setIsBlocking] = useState(false);
   const location = useLocation();
 
@@ -274,7 +275,7 @@ const AddressProfile = () => {
           zipcodeId: finalZipcodeId,
           isDefault: false,
         }),
-      );
+      ).unwrap();
 
       toast.success("เพิ่มที่อยู่สำเร็จ");
     }
@@ -299,6 +300,28 @@ const AddressProfile = () => {
 
     toast.success("ลบที่อยู่สำเร็จ");
   };
+
+
+const handleSetDefault = async (addressId: number) => {
+  if (isBlocking) return;
+    if (updatingItems.includes(addressId)) return;
+
+  // setIsBlocking(true);
+  setUpdatingItems([addressId]);
+
+  try {
+    await dispatch(addAdressDefault(addressId)).unwrap();
+
+    // await dispatch(fetchAllAddresses()).unwrap();
+
+    toast.success("ตั้งค่าที่อยู่เริ่มต้นสำเร็จ");
+  } catch {
+    toast.error("ไม่สามารถตั้งค่าที่อยู่เริ่มต้นได้");
+  } finally {
+    setUpdatingItems([]);
+    setIsBlocking(false);
+  }
+};
 
   const confirmAction = (message: string): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -480,15 +503,15 @@ const AddressProfile = () => {
                       <button
                         data-test="btn-set-default"
                         disabled={address.isDefault}
-                        onClick={() => dispatch(addAdressDefault(address.id))}
-                        className={`shrink-0 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all text-center w-full sm:w-auto ${
-                          address.isDefault
-                            ? "bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed"
-                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 active:bg-gray-100 cursor-pointer shadow-sm"
-                        }`}
-                      >
-                        ตั้งเป็นค่าเริ่มต้น
-                      </button>
+                       onClick={() => handleSetDefault(address.id)}
+  className={`shrink-0 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all text-center w-full sm:w-auto ${
+    address.isDefault
+      ? "bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed"
+      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 active:bg-gray-100 cursor-pointer shadow-sm"
+  }`}
+>
+  ตั้งเป็นค่าเริ่มต้น
+</button>
                     </div>
                   </div>
                 ))

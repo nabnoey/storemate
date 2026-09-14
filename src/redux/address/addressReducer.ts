@@ -102,6 +102,7 @@ const addressSlice = createSlice({
       state.loading = true;
     })   
     .addCase(fetchAllAddresses.fulfilled, (state, action) => {
+       console.log("ALL ADDRESSES FROM API:", action.payload);
       state.addresses = action.payload;
       state.loading = false;
       state.defaultAddress = action.payload.find(
