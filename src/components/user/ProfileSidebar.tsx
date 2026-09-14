@@ -93,11 +93,11 @@ const ProfileSidebar = () => {
         การซื้อของฉัน
       </Link> */}
 
-      <Link
+   <Link
+  data-test="btn-profile-menu-history"
   to="/orders"
+  className={getMainMenuClass("/orders")}
   onMouseEnter={() => {
-    //เพิ่มเพื่อลอง
-    // 🛑 ต้องใส่ if ตรงนี้ครับ! เพื่อห้ามไม่ให้มันยิงซ้ำถ้ากำลังโหลด หรือมีข้อมูลแล้ว
     if (orders.length === 0 && !loading) {
       dispatch(fetchOrders("ALL"));
     }
