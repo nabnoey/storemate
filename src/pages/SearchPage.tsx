@@ -162,9 +162,52 @@ const SearchPage = () => {
 
             <p className="text-[15px] text-black font-semibold">ช่วงราคา (฿)</p>
             <div className="flex items-center gap-2 mt-3 text-black">
-              <input data-test="input-min-price" min="0" type="number" placeholder="฿" value={minPriceInput} onChange={(e) => setMinPriceInput(e.target.value)} className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm" />
+              <input
+  data-test="input-min-price"
+  min="0"
+  type="number"
+  placeholder="฿"
+  value={minPriceInput}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    if (Number(value) >= 0 || value === "") {
+      setMinPriceInput(value);
+    }
+  }}
+  onKeyDown={(e) => {
+    if (e.key === "-" || e.key === "e") {
+      e.preventDefault();
+    }
+  }}
+  className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm"
+/>
+
+<span className="text-gray-500">—</span>
+
+<input
+  data-test="input-max-price"
+  min="0"
+  type="number"
+  placeholder="฿"
+  value={maxPriceInput}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    if (Number(value) >= 0 || value === "") {
+      setMaxPriceInput(value);
+    }
+  }}
+  onKeyDown={(e) => {
+    if (e.key === "-" || e.key === "e") {
+      e.preventDefault();
+    }
+  }}
+  className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm"
+/>
+              {/* <input data-test="input-min-price" min="0" type="number" placeholder="฿" value={minPriceInput} onChange={(e) => setMinPriceInput(e.target.value)} className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm" />
               <span className="text-gray-500">—</span>
-              <input data-test="input-max-price" min="0" type="number" placeholder="฿" value={maxPriceInput} onChange={(e) => setMaxPriceInput(e.target.value)} className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm" />
+              <input data-test="input-max-price" min="0" type="number" placeholder="฿" value={maxPriceInput} onChange={(e) => setMaxPriceInput(e.target.value)} className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm" /> */}
             </div>
             
             <div className="mt-5">
