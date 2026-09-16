@@ -143,14 +143,21 @@ const addressSlice = createSlice({
     });
 
     builder.addCase(addAdressDefault.fulfilled, (state, action) => {
-      const defaultId = action.payload.id;
+  const defaultId = action.payload.id;
 
-      state.addresses = state.addresses.map((addr) => ({
-        ...addr,
-        isDefault: addr.id === defaultId,
-      }));
-      state.defaultAddress = action.payload;
+  state.addresses = state.addresses
+    .map((addr) => ({
+      ...addr,
+      isDefault: addr.id === defaultId,
+    }))
+    .sort((a, b) => {
+      if (a.isDefault === b.isDefault) return 0;
+      return a.isDefault ? -1 : 1;
     });
+
+  state.defaultAddress =
+    state.addresses.find((addr) => addr.id === defaultId) ?? null;
+});
 
     builder.addCase(fetchAddressDefault.fulfilled, (state, action) => {
       state.defaultAddress = action.payload;
