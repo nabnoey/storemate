@@ -134,10 +134,7 @@ function Dashboard() {
     { v: 68 },
   ];
 
-  const weeklyIncomeTotal = rawDashData?.weeklyActiveIncomeChart?.totalWeeklyIncome ?? 0;
-
-  // รวมยอดรายวันของสัปดาห์ (1=จันทร์ ... 7=อาทิตย์) จากข้อมูล graph
-  const dayNames = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+  // รวมยอดรายวันของสัปดาห์ (1=จันทร์ ... 7=อาทิตย์) จากข้อมูล graph เพื่อใช้ในกราฟยอดขายรายวัน (dailySalesChart)
   const weeklyDayMap: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
   (rawDashData?.weeklyActiveIncomeChart?.graph || []).forEach((g) => {
     const dow = Number(g.dayOfWeek);
@@ -145,11 +142,6 @@ function Dashboard() {
       weeklyDayMap[dow] += Number(g.totalSummary || 0);
     }
   });
-
-  const visitorWeeklyChart = [1, 2, 3, 4, 5, 6, 7].map((dow) => ({
-    day: dayNames[dow - 1],
-    value: weeklyDayMap[dow],
-  }));
 
   // 2. Summary KPI Cards
   const summaryCards = [
