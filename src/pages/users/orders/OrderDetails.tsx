@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchOrderDetails } from "../../../redux/orders/orderReducer";
 import {
   FiClock,
-  FiClipboard,
   FiTruck,
   FiCheckCircle,
   FiUser,
@@ -12,6 +11,7 @@ import {
   FiMapPin,
   FiArrowLeft,
 } from "react-icons/fi";
+import { LuClipboardList } from "react-icons/lu";
 import { FaHistory } from "react-icons/fa";
 
 import { Users } from "lucide-react";
@@ -20,7 +20,7 @@ import { statusConfig, getOrderLabel } from "../../../utils/order";
 import type { PaymentMethod } from "../../../types/payment";
 
 function StatusStep({
-  icon: Icon,
+  icon,
   label,
   isCompleted,
   isCurrent,
@@ -30,30 +30,29 @@ function StatusStep({
   isCompleted: boolean;
   isCurrent: boolean;
 }) {
-  const active = isCompleted || isCurrent;
-
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-          active
-            ? "bg-white border-2 border-blue-500 text-blue-500 shadow-sm"
-            : "bg-white border-2 border-gray-300 text-gray-400"
-        }`}
-      >
-        {Icon}
+    <div className="relative z-10 flex flex-col items-center flex-1">
+      <div className="h-10 flex items-center justify-center">
+        <div
+          className={`flex items-center justify-center transition-all duration-300 ${
+            isCurrent
+              ? "w-10 h-10 rounded-full bg-[#3B82F6] text-white text-xl"
+              : isCompleted
+                ? "text-[#3B82F6] text-xl bg-white"
+                : "text-black text-xl bg-white"
+          }`}
+        >
+          {icon}
+        </div>
       </div>
 
-      <span
-        className={`text-xs font-medium text-center ${
-          active ? "font-bold text-blue-500" : "text-gray-400"
-        }`}
-      >
+      <span className="mt-3 text-sm md:text-base text-black text-center whitespace-nowrap">
         {label}
       </span>
     </div>
   );
 }
+
 
 function OrderItemRow({
   image,
@@ -127,7 +126,7 @@ function OrderDetails() {
 
   const steps = [
     { icon: <FiClock />, label: "รอดำเนินการ", status: "PENDING" },
-    { icon: <FiClipboard />, label: "ที่ต้องจัดส่ง", status: "PROCESSING" },
+    { icon: <LuClipboardList />, label: "ที่ต้องจัดส่ง", status: "PROCESSING" },
     { icon: <FiTruck />, label: "ที่ต้องได้รับ", status: "RECEIVE" },
     { icon: <FiCheckCircle />, label: "คำสั่งซื้อสำเร็จ", status: "COMPLETED" },
   ];
@@ -180,56 +179,71 @@ function OrderDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 flex flex-col gap-6 ">
             {order.status === "CANCELLED" || order.status === "REFUNDED" ? (
-              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
-                {order.status === "CANCELLED" && (
-                  <>
-                    <h2 className="text-red-500 font-bold text-lg mb-2">
-                      คำขอยกเลิกได้รับการยอมรับแล้ว
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      คืนคำสั่งซื้อเมื่อ : {orderDate}
-                    </p>
-                  </>
-                )}
+  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
+    {order.status === "CANCELLED" && (
+      <>
+        <h2 className="text-red-500 font-bold text-lg mb-2">
+          คำขอยกเลิกได้รับการยอมรับแล้ว
+        </h2>
+        <p className="text-sm text-gray-500">
+          คืนคำสั่งซื้อเมื่อ : {orderDate}
+        </p>
+      </>
+    )}
 
-                {order.status === "REFUNDED" && (
-                  <>
-                    <h2 className="text-[#EF4444] font-bold text-lg mb-2">
-                      การคืนเงินสำเร็จ
-                    </h2>
-                    <p className="text-sm text-gray-600 mt-2">
-                      เราได้ทำการคืนเงินจำนวน ฿ {order.total.toLocaleString()}{" "}
-                      ให้คุณแล้ว โอนเงินคืนภายใน 7-14 วันทำการ
-                      ในกรณีที่ชำระผ่านบัตรเครดิต/เดบิต อาจใช้เวลา 15-45
-                      วันทำการ หากคุณยังไม่ได้รับเงินคืนภายในระยะเวลาดังกล่าว
-                      กรุณาติดต่อธนาคารเจ้าของบัตร
-                    </p>
-                  </>
-                )}
-              </div>
-            ) : (
-              <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm relative ">
-                <div className="absolute top-[3rem] left-12 right-12 h-0.5 bg-gray-200 z-0">
-                  <div
-                    className="h-full bg-blue-500 transition-all duration-300"
-                    style={{
-                      width: `${(currentStepIndex / (steps.length - 1)) * 100}%`,
-                    }}
-                  />
-                </div>
-                <div className="flex justify-between items-center relative z-10 ">
-                  {steps.map((step, index) => (
-                    <StatusStep
-                      key={step.status}
-                      icon={step.icon}
-                      label={step.label}
-                      isCompleted={index < currentStepIndex}
-                      isCurrent={index === currentStepIndex}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+    {order.status === "REFUNDED" && (
+      <>
+        <h2 className="text-[#EF4444] font-bold text-lg mb-2">
+          การคืนเงินสำเร็จ
+        </h2>
+        <p className="text-sm text-gray-600 mt-2">
+          เราได้ทำการคืนเงินจำนวน ฿ {order.total.toLocaleString()}{" "}
+          ให้คุณแล้ว โอนเงินคืนภายใน 7-14 วันทำการ
+          ในกรณีที่ชำระผ่านบัตรเครดิต/เดบิต อาจใช้เวลา 15-45
+          วันทำการ หากคุณยังไม่ได้รับเงินคืนภายในระยะเวลาดังกล่าว
+          กรุณาติดต่อธนาคารเจ้าของบัตร
+        </p>
+      </>
+    )}
+  </div>
+) : (
+  <div className="bg-white px-4 md:px-8 py-8 rounded-xl border border-gray-200 shadow-sm">
+    <div className="relative">
+      {/* เส้นสีเทาทั้งเส้น */}
+      <div
+        className="absolute h-[2px] bg-gray-300 z-0"
+        style={{
+          top: "20px",
+          left: "12.5%",
+          right: "12.5%",
+        }}
+      />
+
+      {/* เส้นสีน้ำเงินตามสถานะ */}
+      <div
+        className="absolute h-[2px] bg-[#3B82F6] z-[1] transition-all duration-500"
+        style={{
+          top: "20px",
+          left: "12.5%",
+          width: `${(currentStepIndex / (steps.length - 1)) * 75}%`,
+        }}
+      />
+
+      <div className="relative z-10 flex items-start">
+        {steps.map((step, index) => (
+          <StatusStep
+            key={step.status}
+            icon={step.icon}
+            label={step.label}
+            isCompleted={index < currentStepIndex}
+            isCurrent={index === currentStepIndex}
+          />
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+            
 
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
               <h3 className="flex items-center gap-2 font-bold text-gray-800 mb-4">
