@@ -5,5 +5,34 @@
   background-color: #ffffff;
 }
 body {
-  font-family: 'Roboto', sans-serif;
+   font-family: 'Anuphan', sans-serif;
 }
+@media (max-width:575.98px) {
+   .my-element {
+    display: block;
+    width: 100%;
+  }
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+}
+.react-datepicker {
+  display: flex !important;
+  flex-direction: row !important;
+  border: none !important;
+}
+
+.react-datepicker__month-container {
+  float: none !important;
+  width: 320px;
+}
+
+.react-datepicker__month-container + .react-datepicker__month-container {
+  border-left: 1px solid #e5e7eb;
+}
+

@@ -1,0 +1,14 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      VITE_BASE_URL: "https://store-mate-api.onrender.com/api/v1/"
+      VITE_AUTH_API: "auth"
+      VITE_PRODUCT_API: "products"
+      VITE_REVIEW_API: "reviews"
+      VITE_MOD_API: "moderator"
+      VITE_CART_API: "cart"
+    ports:
+      - "5173:80"
