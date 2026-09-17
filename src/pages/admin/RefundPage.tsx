@@ -119,6 +119,7 @@ const RefundPage = () => {
 
     try {
       setAlertError(null);
+
       if (actionType === "APPROVED") {
         await dispatch(approveRefund(targetRefundNo)).unwrap();
       } else if (actionType === "REJECTED") {
@@ -127,9 +128,9 @@ const RefundPage = () => {
 
       toast.dismiss();
       toast.success("อัปเดตสถานะคำขอคืนเงินเรียบร้อยแล้ว");
+
       handleCloseModal();
 
-      // ดึงข้อมูลใหม่ด้วย page ปัจจุบัน เพื่อให้อยู่ที่เดิม
       dispatch(
         fetchRefunds({
           page: currentPage - 1,
@@ -139,7 +140,8 @@ const RefundPage = () => {
         }),
       );
     } catch (err: any) {
-      const errorMessage = err || "เกิดข้อผิดพลาดในการส่งข้อมูลระบบ";
+      const errorMessage = "ขออภัยเกิดข้อผิดพลาดในระบบ";
+
       setAlertError(errorMessage);
       toast.error(errorMessage);
     }
@@ -179,7 +181,7 @@ const RefundPage = () => {
   const visiblePages = getVisiblePages();
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-start text-left w-full font-['Anuphan']">
+    <div className="min-h-screen bg-white flex flex-col items-start text-left w-full font-['Anuphan']">
       <div className="w-full flex flex-col items-start print:hidden">
         <HeaderAdmin
           title="จัดการคำขอคืนเงิน"
@@ -187,7 +189,7 @@ const RefundPage = () => {
         />
 
         <div className="p-6 w-full text-[#374151] max-w-7xl mx-auto flex flex-col flex-1">
-          <main className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col flex-1 w-full">
+          <main className="bg-[#FCFCFC] rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col flex-1 w-full">
             <div className="flex items-center gap-2 mb-5">
               <div className="px-4 py-2 border border-black/10 text-[#0A0A0A] rounded-lg text-xs font-medium bg-white">
                 ทั้งหมด: <span className="font-semibold">{total}</span>
@@ -259,7 +261,7 @@ const RefundPage = () => {
                   <button
                     type="button"
                     onClick={() => setOpen(!open)}
-                    className="w-full flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-2.5 shadow-sm hover:border-blue-400 transition"
+                    className="w-full flex items-center justify-between rounded-lg border border-gray-200 bg-[#F3F4F6] px-4 py-2.5 shadow-sm hover:border-blue-400 transition"
                   >
                     <span>{selectedStatus.label}</span>
 
@@ -312,10 +314,10 @@ const RefundPage = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto flex flex-col items-start rounded-lg bg-white px-[6px] py-3">
               <table className="w-full text-left border-collapse table-fixed">
                 <thead>
-                  <tr className="border-b border-gray-200 text-black text-[16px] font-normal">
+                  <tr className="border-b border-black text-black text-[16px] font-normal">
                     <th className="py-3 px-1 font-normal">หมายเลขคำขอ</th>
                     <th className="py-3 px-1 font-normal w-[140px] text-center">
                       ชื่อลูกค้า

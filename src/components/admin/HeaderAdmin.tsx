@@ -14,7 +14,7 @@ function HeaderAdmin({ title, subtitle }: Props) {
 
         {/* subtitle */}
         {subtitle && (
-          <p className="text-[15px] text-gray-500 mt-1">{subtitle}</p>
+          <p className="text-[15px] text-black font-bold mt-1">{subtitle}</p>
         )}
       </div>
     </div>
