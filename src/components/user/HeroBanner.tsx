@@ -20,9 +20,9 @@ function HeroBanner() {
       id="hero-banner"
       className="relative w-full min-h-150 md:h-150 bg-[#14261C] overflow-hidden flex items-center mb-10 py-10 md:py-0"
     >
-      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12 w-full px-6 md:px-12 lg:px-24 xl:px-32">
+     <div className="relative z-10 flex flex-col md:flex-row items-center justify-center gap-10 lg:gap-16 w-full px-6 md:px-12 lg:px-20 xl:px-24">
         {/* Left: Content Area */}
-        <div className="w-full md:w-1/2 text-left">
+        <div className="w-full md:w-[45%] lg:w-[42%] text-left">
           <span
             id="hero-otop-badge"
             className="inline-block bg-[#3D4221] text-[#E5C67C] text-[12px] px-5 py-1.5 rounded-full border border-[#E5C67C]/30 mb-8 font-bold tracking-widest uppercase"
@@ -67,16 +67,36 @@ function HeroBanner() {
         </div>
 
         {/* Right: Image Showcase */}
-        <div
-          id="hero-image-container"
-          className="w-full h-full md:w-[37%] bg-white rounded-2xl shadow-2xl p-6"
-        >
-          <img 
-            src={storeImg?.promotionImage} 
-            alt="Promotion" 
-            className="w-full h-auto object-cover" 
-          />
-        </div>
+<div
+  id="hero-image-container"
+  className="
+    w-full
+    md:w-[38%]
+    lg:w-[40%]
+    max-w-[500px]
+    h-[280px]
+    md:h-[360px]
+    lg:h-[400px]
+    bg-white
+    rounded-2xl
+    shadow-2xl
+    p-6
+    md:p-8
+    overflow-hidden
+    shrink-0
+    lg:translate-x-10
+  "
+>
+  {storeImg?.promotionImage ? (
+    <img
+      src={storeImg.promotionImage}
+      alt="Promotion"
+      className="w-full h-full object-contain"
+    />
+  ) : (
+    <div className="w-full h-full rounded-xl bg-gray-200 animate-pulse" />
+  )}
+</div>
       </div>
     </section>
   );
