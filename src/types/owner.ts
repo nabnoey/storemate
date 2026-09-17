@@ -26,7 +26,7 @@ export interface Store {
   zipcode: string;
   email: string;
   promotionImage: string;
-  imageFile: string | File
+  // imageFile: string | File
 }
 
 export interface OwnerState {

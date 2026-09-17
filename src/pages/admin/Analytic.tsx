@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Download, Upload, Trash2, FileText, X } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import Loading from "../../components/loading/Loading";
+import HeaderAdmin from "../../components/admin/HeaderAdmin";
 import { toast } from "react-hot-toast";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../redux/store";
@@ -238,10 +239,10 @@ export default function Analytic() {
   return (
     <div className="flex flex-col bg-white min-h-screen text-black relative">
       {/* Title & Subtitle */}
-      <div className="px-8 pt-6 pb-4 border-b border-gray-200">
-        <h1 className="text-3xl font-bold text-gray-900">รายงานยอดขาย</h1>
-        <p className="text-[15px] text-gray-500 mt-1">รายงานยอดขายและแนวโน้มการขายของคุณ</p>
-      </div>
+      <HeaderAdmin 
+        title="รายงานยอดขาย"
+        subtitle="รายงานยอดขายและแนวโน้มการขายของคุณ"
+      />
 
       <div className="p-8 flex flex-col gap-6">
         {/* KPI Summary Cards */}

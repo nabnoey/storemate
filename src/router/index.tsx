@@ -30,7 +30,7 @@ const AddCreditCard = lazy(
 );
 const AdminLayout = lazy(() => import("../layouts/AdminLayout"));
 const PaymentQR = lazy(() => import("../pages/users/payment/PaymentQR"));
-const HistoryPage = lazy(() => import("../pages/users/orders/HistoryShop"));
+const OrderPage = lazy(() => import("../pages/users/orders/Order"));
 const OderDetails = lazy(() => import("../pages/users/orders/OrderDetails"));
 const CancelOrderPage = lazy(
   () => import("./../pages/users/orders/CancelOrder"),
@@ -150,18 +150,10 @@ const router = createBrowserRouter([
         element: <PaymentQR />,
       },
       {
-        path: "history-shop",
-        element: (
-          <ProtectedRout>
-            <HistoryPage />
-          </ProtectedRout>
-        ),
-      },
-      {
         path: "/orders",
         element: (
           <ProtectedRout>
-            <HistoryPage />
+            <OrderPage />
           </ProtectedRout>
         ),
       },
@@ -216,7 +208,7 @@ const router = createBrowserRouter([
         element: <Order />,
       },
       {
-        path: "orders/:orderNo",
+        path: "orders-management/:orderNo",
         element: <OrderDetail />,
       },
       {

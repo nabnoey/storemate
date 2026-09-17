@@ -1,7 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { changeStatus, getoOrderByOrderNo } from "../../redux/moderator/ModeratorReducer";
+import {
+  changeStatus,
+  getOrderByOrderNo,
+} from "../../redux/moderator/ModeratorReducer";
 import {
   FiClock,
   FiClipboard,
@@ -15,7 +18,11 @@ import {
 import { FaHistory } from "react-icons/fa";
 import { Users } from "lucide-react";
 import type { RootState, AppDispatch } from "../../redux/store";
-import { STATUS_LABELS, type OrderItem } from "../../types/moderator/ordersMod";
+import {
+  STATUS_LABELS,
+  STATUS_ORDER,
+  type OrderItem,
+} from "../../types/moderator/ordersMod";
 import { toast } from "react-hot-toast";
 import type { PaymentMethod } from "../../types/payment";
 
@@ -37,8 +44,8 @@ function StatusStep({
           isCurrent
             ? "bg-[#3B82F6] text-white shadow-md shadow-blue-200"
             : isCompleted
-            ? "bg-white border-2 border-[#3B82F6] text-[#3B82F6]"
-            : "bg-white border-2 border-gray-300 text-gray-400"
+              ? "bg-white border-2 border-[#3B82F6] text-[#3B82F6]"
+              : "bg-white border-2 border-gray-300 text-gray-400"
         }`}
       >
         {Icon}
@@ -76,13 +83,16 @@ function OrderItemRow({
           className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-100 rounded-md object-cover flex-shrink-0"
         />
         <div>
-          <p className="font-bold text-gray-800 text-xs sm:text-sm line-clamp-2">{name}</p>
+          <p className="font-bold text-gray-800 text-xs sm:text-sm line-clamp-2">
+            {name}
+          </p>
           <p className="text-xs text-gray-500 mt-1">จำนวน: {quantity}</p>
         </div>
       </div>
       <div className="text-right ml-4 flex-shrink-0">
-        <p className="font-bold text-gray-800 text-sm sm:text-base">฿ {price?.toLocaleString()}</p>
-        <p className="text-[10px] text-gray-400 font-medium mt-0.5">UNIT PRICE</p>
+        <p className="font-bold text-gray-800 text-sm sm:text-base">
+          ฿ {price}
+        </p>
       </div>
     </div>
   );
@@ -93,33 +103,15 @@ function OrderDetail() {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { orderToPrint, loading } = useSelector((state: RootState) => state.moderator);
-  const order = orderToPrint && orderToPrint.length > 0 ? orderToPrint[0] : null;
+  const { orderDetail } = useSelector((state: RootState) => state.moderator);
+  const order = orderDetail && orderDetail.length > 0 ? orderDetail[0] : null;
   const [selectedStatus, setSelectedStatus] = useState("");
 
   useEffect(() => {
-    if (orderNo && orderNo !== "undefined") {
-      dispatch(getoOrderByOrderNo(orderNo));
-    } else {
-      console.error("เลขที่คำสั่งซื้อไม่ถูกต้อง:", orderNo);
+    if (orderNo && orderNo) {
+      dispatch(getOrderByOrderNo(orderNo));
     }
   }, [orderNo, dispatch]);
-
-  // useEffect(() => {
-  //   if (order?.status) {
-  //     setSelectedStatus(order.status);
-  //   }
-  // }, [order?.status]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">กำลังโหลด...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (!order) {
     return (
@@ -127,7 +119,7 @@ function OrderDetail() {
         <div className="text-center">
           <p className="text-gray-600 mb-4">ไม่พบข้อมูลคำสั่งซื้อ</p>
           <button
-            onClick={() => navigate("/moderator/orders")}
+            onClick={() => navigate("/orders-management")}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
           >
             กลับไปที่จัดการคำสั่งซื้อ
@@ -137,11 +129,11 @@ function OrderDetail() {
     );
   }
 
-const handleUpdateStatus = async () => {
+  const handleUpdateStatus = async () => {
     if (!order) return;
-    
+
     // ดึงค่าที่เลือกมาใช้ ถ้ายังไม่เลือกอะไรให้ใช้สถานะเดิมจาก backend
-    const currentSelected = selectedStatus || order.status; 
+    const currentSelected = selectedStatus || order.status;
 
     if (currentSelected === order.status) {
       toast.error("กรุณาเลือกสถานะใหม่ที่ต่างจากสถานะปัจจุบัน");
@@ -150,41 +142,27 @@ const handleUpdateStatus = async () => {
 
     try {
       await dispatch(
-        changeStatus({ orderNo: order.orderNo, status: currentSelected })
+        changeStatus({ orderNo: order.orderNo, status: currentSelected }),
       ).unwrap();
 
-      toast.success("อัปเดตสถานะเรียบร้อยแล้ว");
+      toast.success("อัปเดตสถานะคำสั่งซื้อสำเร็จ");
 
       setTimeout(() => {
-        navigate("/moderator/orders");
+        navigate("/orders-management");
       }, 1500);
     } catch {
-      toast.error("ไม่สามารถอัปเดตสถานะได้ (อาจเกิดจากสิทธิ์ 401)");
+      toast.error("ไม่สามารถเปลี่ยนสถานะคำสั่งซื้อได้");
     }
   };
 
-  const recipientName = order.orderRecipient?.recipientName;
-  const recipientPhone = order.orderRecipient?.phone;
-
+  const currentIndex = STATUS_ORDER.indexOf(order.status);
   const recipient = order.orderRecipient || {};
-
-  const deliveryAddress = {
-    streetAddress: recipient.streetAddress || "ไม่ระบุที่อยู่สำหรับการจัดส่ง",
-    subdistrict: recipient.subdistrict || "",
-    district: recipient.district || "",
-    province: recipient.province || "",
-    zipcode: recipient.zipcode || "",
-  };
-
-  const orderTime = order.createdAt
-    ? new Date(order.createdAt).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }) + " น."
-    : "";
 
   const steps = [
     { icon: <FiClock />, label: "รอดำเนินการ", status: "PENDING" },
-    { icon: <FiClipboard />, label: "ที่ต้องจัดส่ง", status: "PROCESSING" },
-    { icon: <FiTruck />, label: "ที่ต้องได้รับ", status: "RECEIVED" },
-    { icon: <FiCheckCircle />, label: "คำสั่งซื้อสำเร็จ", status: "COMPLETED" },
+    { icon: <FiClipboard />, label: "กำลังเตรียมสินค้า", status: "PROCESSING" },
+    { icon: <FiTruck />, label: "จัดส่งแล้ว", status: "RECEIVED" },
+    { icon: <FiCheckCircle />, label: "สำเร็จแล้ว", status: "COMPLETED" },
   ];
 
   const currentStepIndex = steps.findIndex((s) => s.status === order.status);
@@ -196,7 +174,7 @@ const handleUpdateStatus = async () => {
       productName: "น้ำมะม่วงหาวมะนาวโห่ สกัดเข้มข้น ไม่มีน้ำตาล",
       quantity: 1,
       price: order.total || 35,
-    }
+    },
   ];
 
   const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -205,14 +183,17 @@ const handleUpdateStatus = async () => {
     CARD: "บัตรเครดิต / เดบิต",
   };
 
-  const progressWidth = currentStepIndex > 0 ? `${(currentStepIndex / (steps.length - 1)) * 100}%` : "0%";
+  const progressWidth =
+    currentStepIndex > 0
+      ? `${(currentStepIndex / (steps.length - 1)) * 100}%`
+      : "0%";
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-start text-left w-full mt-0 lg:mt-10">
       <div className="bg-white border-b border-gray-200 w-full p-4 sm:p-6">
         <div className="max-w-7xl mx-auto flex items-center gap-4">
           <button
-            onClick={() => navigate("/moderator/orders")}
+            onClick={() => navigate("/orders-management")}
             className="hover:opacity-70 transition-opacity text-gray-700"
             type="button"
           >
@@ -248,7 +229,10 @@ const handleUpdateStatus = async () => {
                 {/* ตัวไอคอน Step */}
                 <div className="flex justify-between items-start relative z-10 w-full">
                   {steps.map((step, index) => (
-                    <div key={step.status} className="w-1/4 flex justify-center">
+                    <div
+                      key={step.status}
+                      className="w-1/4 flex justify-center"
+                    >
                       <StatusStep
                         icon={step.icon}
                         label={step.label}
@@ -262,22 +246,37 @@ const handleUpdateStatus = async () => {
 
               {order.status !== "COMPLETED" && (
                 <div className="mt-8 border-t border-gray-100 pt-6">
-                  <h3 className="font-bold text-gray-800 mb-4 text-sm sm:text-base">เปลี่ยนสถานะคำสั่งซื้อ</h3>
+                  <h3 className="font-bold text-gray-800 mb-4 text-sm sm:text-base">
+                    เปลี่ยนสถานะคำสั่งซื้อ
+                  </h3>
                   <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4">
                     <div className="flex flex-col w-full sm:w-auto">
-                      <label className="text-xs text-gray-500 mb-2">เลือกสถานะ:</label>
+                      <label className="text-xs text-gray-500 mb-2">
+                        เลือกสถานะ:
+                      </label>
                       <div className="relative w-full sm:w-56">
                         <select
                           value={selectedStatus || order.status}
                           onChange={(e) => setSelectedStatus(e.target.value)}
                           className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 pr-8"
                         >
-                          {Object.entries(STATUS_LABELS).map(([key, label]) => (
-                            <option key={key} value={key}>{label}</option>
-                          ))}
+                          {Object.entries(STATUS_LABELS)
+                            .filter(
+                              ([key]) =>
+                                STATUS_ORDER.indexOf(key) >= currentIndex,
+                            )
+                            .map(([key, label]) => (
+                              <option key={key} value={key}>
+                                {label}
+                              </option>
+                            ))}
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                          <svg
+                            className="fill-current h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                          >
                             <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                           </svg>
                         </div>
@@ -316,26 +315,35 @@ const handleUpdateStatus = async () => {
                     name={item.productName || "ไม่ระบุชื่อสินค้า"}
                     quantity={item.quantity}
                     price={item.price}
+                   
                   />
                 ))}
               </div>
 
               <div className="flex flex-col gap-4 pt-4 border-t border-gray-100">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-[16px] font-medium text-gray-600">ราคารวม</span>
+                  <span className="text-sm sm:text-[16px] font-medium text-gray-600">
+                    ราคารวม
+                  </span>
                   <div className="text-right">
                     <p className="text-lg sm:text-xl text-blue-500 font-bold">
-                      ฿ {order.total?.toLocaleString()}
+                      ฿ {order.total.toLocaleString()}
                     </p>
                     <p className="text-[10px] text-gray-400 font-bold">THB</p>
                   </div>
                 </div>
 
                 <div className="flex justify-between items-center border-t border-gray-50 pt-4">
-                  <span className="text-sm sm:text-[16px] font-medium text-gray-600">ช่องทางชำระเงิน</span>
+                  <span className="text-sm sm:text-[16px] font-medium text-gray-600">
+                    ช่องทางชำระเงิน
+                  </span>
                   <div className="text-right">
                     <p className="text-sm sm:text-[16px] font-medium text-gray-900">
-                      {PAYMENT_METHOD_LABELS[order.checkoutType as PaymentMethod] || order.checkoutType || "ไม่ระบุช่องทางชำระเงิน"}
+                      {PAYMENT_METHOD_LABELS[
+                        order.checkoutType as PaymentMethod
+                      ] ||
+                        order.checkoutType ||
+                        "ไม่ระบุช่องทางชำระเงิน"}
                     </p>
                   </div>
                 </div>
@@ -349,15 +357,30 @@ const handleUpdateStatus = async () => {
               </h3>
 
               <div className="relative border-l-2 border-gray-100 ml-3 space-y-6">
-                <div className="relative pl-6">
-                  <div className="absolute -left-[5px] top-1.5 w-2 h-2 bg-green-500 rounded-full ring-4 ring-green-100"></div>
-                  <p className="font-bold text-sm text-gray-800">
-                    สถานะปัจจุบัน: {STATUS_LABELS[order.status] || order.status}
+                {order.orderStatusHistory?.length ? (
+                  order.orderStatusHistory.map((history, index) => (
+                    <div key={index} className="relative pl-6">
+                      <div className="absolute -left-[5px] top-1.5 w-2 h-2 bg-green-500 rounded-full ring-4 ring-green-100" />
+
+                      <p className="font-bold text-sm text-gray-800">
+                        {STATUS_LABELS[history.status] || history.status}
+                      </p>
+
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(history.updatedAt).toLocaleString("th-TH", {
+                          dateStyle: "short",
+
+                          timeStyle: "short",
+                        })}{" "}
+                        โดย {history.updatedBy}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-400">
+                    ไม่มีประวัติการเปลี่ยนแปลง
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    อัพเดท วันนี้ , {orderTime} โดย ระบบ
-                  </p>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -380,7 +403,7 @@ const handleUpdateStatus = async () => {
                       <FiUser />
                     </div>
                     <p className="font-bold text-sm text-gray-900 break-words">
-                      {recipientName}
+                      {recipient.recipientName}
                     </p>
                   </div>
                 </div>
@@ -394,7 +417,7 @@ const handleUpdateStatus = async () => {
                       <FiPhone />
                     </div>
                     <p className="font-bold text-sm text-gray-900 break-words">
-                      {recipientPhone}
+                      {recipient.phone}
                     </p>
                   </div>
                 </div>
@@ -408,17 +431,17 @@ const handleUpdateStatus = async () => {
                       <FiMapPin />
                     </div>
                     <div className="font-sans text-sm text-black leading-relaxed break-words">
-                      {deliveryAddress.streetAddress}
-                      {deliveryAddress.subdistrict && (
+                      {recipient.streetAddress}
+                      {recipient.subdistrict && (
                         <>
                           <br />
-                          {deliveryAddress.subdistrict} {deliveryAddress.district}
+                          {recipient.subdistrict} {recipient.district}
                         </>
                       )}
-                      {deliveryAddress.province && (
+                      {recipient.province && (
                         <>
                           <br />
-                          {deliveryAddress.province} {deliveryAddress.zipcode}
+                          {recipient.province} {recipient.zipcode}
                         </>
                       )}
                     </div>

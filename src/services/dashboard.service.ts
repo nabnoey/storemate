@@ -8,8 +8,10 @@ export const DashboardService = {
     return response.data;
   },
   
-  getSalesAnalytics: async () => {
-    const response = await api.get(`${OWNER_API}/sales-analytics/dashboard`);
+  getSalesAnalytics: async (period?: string) => {
+    const response = await api.get(`/${OWNER_API}/sales-analytics/dashboard`, {
+      params: { period },
+    });
     return response.data;
   },
 

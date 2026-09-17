@@ -7,7 +7,7 @@ export type CartItem = {
   quantity: number;
   subTotal: number;
   stockQuantity: number;
-  productStatus: "ACTIVE" | "CHECKED_OUT";
+  productStatus: "ACTIVE" | "INACTIVE" |"CHECKED_OUT";
 };
 
 export type CartItemRequestDTO = Pick<CartItem, "productId" | "quantity">;

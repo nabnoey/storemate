@@ -13,6 +13,7 @@ export type Product = {
   stockQuantity: number;
   productStatus: "ACTIVE" | "INACTIVE" | "DELETED";
   is_deleted: boolean;
+  quantity: number;
 };
 
 export interface CategoryGroup {

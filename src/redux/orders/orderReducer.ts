@@ -6,14 +6,14 @@ interface OrdersState {
   orders: Order[];
   orderDetail: Order | null;
   loading: boolean;
-  error: string | null;
+ 
 }
 
 const initialState: OrdersState = {
   orders: [],
   orderDetail: null,
   loading: false,
-  error: null,
+ 
 };
 
 export const fetchOrders = createAsyncThunk(
@@ -41,32 +41,19 @@ const ordersSlice = createSlice({
 
       .addCase(fetchOrders.pending, (state) => {
         state.loading = true;
-        state.orders = [];
-        state.error = null;
       })
+    
       .addCase(fetchOrders.fulfilled, (state, action) => {
         state.orders = action.payload;
         state.loading = false;
       })
-      .addCase(fetchOrders.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || "เกิดข้อผิดพลาด";
-      })
+     .addCase(fetchOrders.rejected, (state) => {
+  state.loading = false;
+})
 
-      .addCase(fetchOrderDetails.pending, (state) => {
-        state.loading = true;
-        state.orderDetail = null;
-        state.error = null;
-      })
       .addCase(fetchOrderDetails.fulfilled, (state, action) => {
         state.orderDetail = action.payload;
-        state.loading = false;
       })
-      .addCase(fetchOrderDetails.rejected, (state, action) => {
-        state.loading = false;
-        state.error =
-          action.error.message || "เกิดข้อผิดพลาดในการโหลดรายละเอียด";
-      });
   },
 });
 

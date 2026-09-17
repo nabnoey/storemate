@@ -11,15 +11,27 @@ import { fetchProductById } from "../redux/products/productReducer";
 import { TokenService } from "../services/token.service";
 
 import Pagination from "../components/user/Pagination";
-// import Loading from "../components/loading/Loading";
+import Skeletons from "../components/loading/Skeletons";
 
 import type { CartItemRequestDTO } from "../types/cartItem";
 
-const categoryTranslator: Record<string, string> = {
-  Promotion: "โปรโมชัน",
-  Soap: "สบู่",
-  Drinks: "เครื่องดื่ม",
-  Shampoo: "แชมพู",
+const categoryConfig: Record<string, { label: string; search: string }> = {
+  Promotion: {
+    label: "โปรโมชัน",
+    search: "promotion",
+  },
+  Soap: {
+    label: "สบู่",
+    search: "soap",
+  },
+  Drinks: {
+    label: "เครื่องดื่ม",
+    search: "drinks",
+  },
+  Shampoo: {
+    label: "แชมพู",
+    search: "shampoo",
+  },
 };
 
 const ProductDetailPage: React.FC = () => {
@@ -34,8 +46,8 @@ const ProductDetailPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   // const [openMenuId, setOpenMenuId] = useState<number | string | null>(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const productDetail = useSelector(
-    (state: RootState) => state.products.selectedProduct,
+  const { selectedProduct: productDetail, loading } = useSelector(
+    (state: RootState) => state.products,
   );
   const currentStock = productDetail?.quantity || 0;
   const cartItems = useSelector((state: RootState) => state.carts.items);
@@ -54,6 +66,10 @@ const ProductDetailPage: React.FC = () => {
     indexOfFirstReview,
     indexOfLastReview,
   );
+
+  const breadcrumbLink = `/search?keyword=&category=${
+    categoryConfig[categoryName]?.search ?? ""
+  }`;
 
   //เช็คสินค้าในรถเข็น
   const itemInCart = useMemo(() => {
@@ -81,7 +97,7 @@ const ProductDetailPage: React.FC = () => {
     if (buyQuantity < currentStock) {
       setBuyQuantity((prev) => prev + 1);
     } else {
-      toast.error("จำนวนสินค้าในสต็อกไม่เพียงพอ", { duration: 1500 });
+      toast.error("จำนวนสินค้าในสต็อกไม่เพียงพอ");
     }
   };
 
@@ -97,16 +113,14 @@ const ProductDetailPage: React.FC = () => {
     if (isAddingToCart) return;
 
     if (!token) {
-      toast.error("กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงรถเข็น", {
-        duration: 1500,
-      });
+      toast.error("กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงรถเข็น");
       navigate("/login");
       return;
     }
     if (!productDetail) return;
 
     if (isUnavailable) {
-      toast.error("สินค้านี้ไม่พร้อมจำหน่าย", { duration: 1500 });
+      toast.error("สินค้านี้ไม่พร้อมจำหน่าย");
       return;
     }
 
@@ -116,12 +130,10 @@ const ProductDetailPage: React.FC = () => {
       if (quantityInCart > 0) {
         toast.error(
           `ไม่สามารถเพิ่มจำนวนสินค้าได้ เนื่องจากคุณเพิ่มสินค้านี้ไว้ในรถเข็นเเล้ว ${quantityInCart} ชิ้น`,
-          { duration: 1500 },
         );
       } else {
         toast.error(
           `จำนวนสินค้าในสต็อกไม่เพียงพอ (คงเหลือ ${currentStock} ชิ้น)`,
-          { duration: 1500 },
         );
       }
       return;
@@ -136,7 +148,7 @@ const ProductDetailPage: React.FC = () => {
 
     try {
       await dispatch(addToCartThunk(cartItemPayload)).unwrap();
-      toast.success("เพิ่มสินค้าเข้ารถเข็นเรียบร้อยแล้ว", { duration: 1500 });
+      toast.success("เพิ่มสินค้าเข้ารถเข็นเรียบร้อยแล้ว");
       setBuyQuantity(1);
 
       if (shouldRedirect) {
@@ -148,7 +160,7 @@ const ProductDetailPage: React.FC = () => {
         backendMessage = error.response?.data?.message || error.message;
       }
       if (backendMessage === "There is insufficient stock.") {
-        toast.error("จำนวนสินค้าในสต็อกไม่เพียงพอ", { duration: 1500 });
+        toast.error("จำนวนสินค้าในสต็อกไม่เพียงพอ");
       } else {
         toast.error(backendMessage);
       }
@@ -162,7 +174,7 @@ const ProductDetailPage: React.FC = () => {
     const token = TokenService.getAccessToken();
 
     if (!token) {
-      toast.error("กรุณาเข้าสู่ระบบก่อนทำการสั่งซื้อ", { duration: 1500 });
+      toast.error("กรุณาเข้าสู่ระบบก่อนทำการสั่งซื้อ");
       navigate("/login");
       return;
     }
@@ -170,14 +182,13 @@ const ProductDetailPage: React.FC = () => {
     if (!productDetail) return;
 
     if (isUnavailable) {
-      toast.error("สินค้านี้ไม่พร้อมจำหน่าย", { duration: 1500 });
+      toast.error("สินค้านี้ไม่พร้อมจำหน่าย");
       return;
     }
 
     if (buyQuantity > currentStock) {
       toast.error(
         `จำนวนสินค้าในสต็อกไม่เพียงพอ (คงเหลือ ${currentStock} ชิ้น)`,
-        { duration: 1500 },
       );
       return;
     }
@@ -224,13 +235,21 @@ const ProductDetailPage: React.FC = () => {
     setCurrentPage(page);
   };
 
-  // if (loading) return <Loading />;
-  if (!productDetail)
+  if (loading) {
+    return (
+      <div className="min-h-screen p-4">
+        <Skeletons />
+      </div>
+    );
+  }
+
+  if (!productDetail) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         ไม่พบสินค้า
       </div>
     );
+  }
 
   return (
     <main className="w-full min-h-screen bg-white flex flex-col font-anuphan">
@@ -252,10 +271,10 @@ const ProductDetailPage: React.FC = () => {
               className="w-5 h-5 mx-1 text-black"
             />
             <Link
-              to={`/search?category=${categoryName}`}
+              to={breadcrumbLink}
               className="transition-colors cursor-pointer"
             >
-              {categoryTranslator[categoryName] || categoryName}
+              {categoryConfig[categoryName]?.label || categoryName}
             </Link>
             <Icon
               icon="material-symbols:chevron-right-rounded"
@@ -321,7 +340,10 @@ const ProductDetailPage: React.FC = () => {
               id="product-details-container"
               className="flex flex-col mt-4 md:mt-0 h-full w-full md:border md:border-gray-100 md:rounded-xl md:p-6 md:shadow-lg"
             >
-              <h1 className="order-1 text-2xl md:text-3xl lg:text-4xl font-bold text-[#2C2221] mb-2 md:mb-3 leading-tight">
+              <h1
+                data-test="product-name"
+                className="order-1 text-2xl md:text-3xl lg:text-4xl font-bold text-[#2C2221] mb-2 md:mb-3 leading-tight"
+              >
                 {productDetail.productName}
               </h1>
 

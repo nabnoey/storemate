@@ -9,6 +9,7 @@ const initialState: AddressState = {
   districts: [],
   subdistricts: [],
   zipcodeId: [],
+  loading: false,
 };
 
 export const addAddress = createAsyncThunk(
@@ -45,17 +46,11 @@ export const setDefaultAddressThunk = createAsyncThunk(
   },
 );
 
-
-
 export const deleteAddress = createAsyncThunk(
   "address/deleteAddress",
-  async (id: number, { rejectWithValue }) => {
-    try {
-      const response = await UserService.deleteAddress(id);
-      return response; 
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data);
-    }
+  async (id: number) => {
+    const response = await UserService.deleteAddress(id);
+    return response;
   },
 );
 
@@ -82,9 +77,9 @@ export const addressDropdown = createAsyncThunk(
     districtId,
     subdistrictId,
   }: {
-    provinceId: number;
-    districtId: number;
-    subdistrictId: number;
+    provinceId?: number;
+    districtId?: number;
+    subdistrictId?: number;
   }) => {
     const response = await UserService.addressDropdown(
       provinceId,
@@ -101,22 +96,29 @@ const addressSlice = createSlice({
   reducers: {},
 
   extraReducers: (builder) => {
-    builder.addCase(fetchAllAddresses.fulfilled, (state, action) => {
+    builder
+
+    .addCase(fetchAllAddresses.pending, (state) => {
+      state.loading = true;
+    })   
+    .addCase(fetchAllAddresses.fulfilled, (state, action) => {
+       console.log("ALL ADDRESSES FROM API:", action.payload);
       state.addresses = action.payload;
-      state.defaultAddress =
-        action.payload.find((addr: Address) => addr.isDefault);
+      state.loading = false;
+      state.defaultAddress = action.payload.find(
+        (addr: Address) => addr.isDefault,
+      );
     });
 
-
-
     builder.addCase(updateAddress.fulfilled, (state, action) => {
-      const updatedAddress = action.payload;
-      const index = state.addresses.findIndex((addr) => addr.id === updatedAddress.id);
-      if (index !== -1) {
-        state.addresses[index] = updatedAddress;
-        if (updatedAddress.isDefault) {
-          state.defaultAddress = updatedAddress;
-        }
+      const updated = action.payload;
+
+      state.addresses = state.addresses.map((addr) =>
+        addr.id === updated.id ? updated : addr,
+      );
+
+      if (updated.isDefault) {
+        state.defaultAddress = updated;
       }
     });
 
@@ -132,19 +134,30 @@ const addressSlice = createSlice({
         (addr) => addr.id !== action.meta.arg,
       );
       if (state.defaultAddress?.id === action.meta.arg) {
-        state.defaultAddress = null;
+        state.defaultAddress = state.addresses[0];
+
+        if (state.defaultAddress) {
+          state.defaultAddress.isDefault = true;
+        }
       }
     });
 
     builder.addCase(addAdressDefault.fulfilled, (state, action) => {
-      const defaultId = action.payload.id;
+  const defaultId = action.payload.id;
 
-      state.addresses = state.addresses.map((addr) => ({
-        ...addr,
-        isDefault: addr.id === defaultId,
-      }));
-      state.defaultAddress = action.payload;
+  state.addresses = state.addresses
+    .map((addr) => ({
+      ...addr,
+      isDefault: addr.id === defaultId,
+    }))
+    .sort((a, b) => {
+      if (a.isDefault === b.isDefault) return 0;
+      return a.isDefault ? -1 : 1;
     });
+
+  state.defaultAddress =
+    state.addresses.find((addr) => addr.id === defaultId) ?? null;
+});
 
     builder.addCase(fetchAddressDefault.fulfilled, (state, action) => {
       state.defaultAddress = action.payload;
@@ -152,26 +165,27 @@ const addressSlice = createSlice({
 
     builder.addCase(addressDropdown.fulfilled, (state, action) => {
       const raw = action.payload;
+      console.log("API Response:", raw);
       const data = Array.isArray(raw) ? raw : raw.data;
 
       const { provinceId, districtId, subdistrictId } = action.meta.arg;
 
-      if (Array.isArray(data)) {
-        if (!provinceId || provinceId === 0) {
-          state.provinces = data;
-          state.districts = [];
-          state.subdistricts = [];
-          state.zipcodeId = [];
-        } else if (provinceId > 0 && (!districtId || districtId === 0)) {
-          state.districts = data;
-          state.subdistricts = [];
-          state.zipcodeId = [];
-        } else if (provinceId > 0 && districtId > 0 && subdistrictId === 0) {
-          state.subdistricts = data;
-          state.zipcodeId = [];
-        }  else if (provinceId > 0 && districtId > 0 && subdistrictId > 0) {
-      state.zipcodeId = data; 
-    }
+      if (!Array.isArray(data)) return;
+
+      if (!provinceId) {
+        state.provinces = data;
+        state.districts = [];
+        state.subdistricts = [];
+        state.zipcodeId = [];
+      } else if (provinceId && !districtId) {
+        state.districts = data;
+        state.subdistricts = [];
+        state.zipcodeId = [];
+      } else if (provinceId && districtId && !subdistrictId) {
+        state.subdistricts = data;
+        state.zipcodeId = [];
+      } else if (provinceId && districtId && subdistrictId) {
+        state.zipcodeId = data;
       }
     });
   },

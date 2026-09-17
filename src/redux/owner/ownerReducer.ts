@@ -8,7 +8,6 @@ import type {
   GetUserManagementParams,
   UserManagementResponse,
 } from "../../types/owner";
-import { parseThaiAddress } from "../../utils/address";
 
 const ROLE_PRIORITY: Record<string, number> = {
   OWNER: 0,
@@ -124,20 +123,18 @@ const ownerSlice = createSlice({
         });
 
         state.page = action.payload.page;
-        const total = action.payload.total ?? 0;
-        const size = action.payload.size || 5;
-
-        state.total = total;
-        state.totalPages = action.payload.totalPages ?? Math.ceil(total / size);
-        state.totalPages = action.payload.totalPages ?? Math.ceil(total / size);
+        state.size = action.payload.size || 10; 
+        state.total = action.payload.total ?? 0;
+        
+        
+        state.totalPages = Math.ceil(state.total / state.size);
       })
 
-      // GET STORE
+      
       .addCase(getStore.fulfilled, (state, action) => {
-        state.store = parseThaiAddress(action.payload);
+        state.store = action.payload;
       })
 
-      // SUSPEND USER
       .addCase(suspendUser.fulfilled, (state, action) => {
         const { userId, response } = action.payload;
         const user = state.users.find((u) => u.id === userId);
@@ -150,7 +147,7 @@ const ownerSlice = createSlice({
         }
       })
 
-      // ACTIVE USER
+  // ACTIVE USER
       .addCase(activeUser.fulfilled, (state, action) => {
         const { userId, response } = action.payload;
         const user = state.users.find((u) => u.id === userId);

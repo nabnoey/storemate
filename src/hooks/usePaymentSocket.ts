@@ -7,34 +7,37 @@ import { setPaymentStatus } from "../redux/payment/paymentReducer";
 import type { RootState } from "../redux/store";
 
 let globalClient: Client | null = null;
+// ไว้เช็คว่าเป็น token ใคร แล้ว token ที่ได้มามีการเปลี่ยน token ไหม
 let currentToken: string | null = null;
 
+// เรียกว่าคือการสร้าง hooks
 const usePaymentSocket = () => {
   const dispatch = useDispatch();
   const token = useSelector((state: RootState) => state.auth.token);
 
   useEffect(() => {
-    console.log("SOCKET EFFECT RUN");
+    // console.log("SOCKET EFFECT RUN");
 
     if (!token) {
-      console.log("WAITING TOKEN...");
+      // console.log("WAITING TOKEN...");
       return;
     }
 
-    // ✅ reuse connection
+    // reuse connection
     if (globalClient && currentToken === token) {
-      console.log("REUSE SOCKET");
+      // console.log("REUSE SOCKET");
       return;
     }
 
     if (globalClient && currentToken !== token) {
-      console.log("TOKEN CHANGED, RECONNECTING...");
+      // console.log("TOKEN CHANGED, RECONNECTING...");
       globalClient.deactivate();
       globalClient = null;
     }
 
-    console.log("CONNECT SOCKET WITH TOKEN");
+    // console.log("CONNECT SOCKET WITH TOKEN");
 
+    // สร้างตัวเชื่อมต่อ
     const client = new Client({
       //https://api.store-mate-api.me/ws
       webSocketFactory: () => new SockJS(import.meta.env.VITE_SOCKET_URL, null),
@@ -47,23 +50,31 @@ const usePaymentSocket = () => {
         Authorization: `Bearer ${token}`,
       },
 
-      debug: (str) => console.log("[STOMP]", str),
-      onWebSocketError: (event) => {
-        console.error("WS ERROR:", event);
-      },
+      // debug: (str) => console.log("[STOMP]", str),
+      // onWebSocketError: (event) => {
+      //   console.error("WS ERROR:", event);
+      // },
 
-      onDisconnect: () => {
-        console.log("STOMP DISCONNECTED");
-      },
+      // onDisconnect: () => {
+      //   console.log("STOMP DISCONNECTED");
+      // },
 
       onConnect: () => {
         currentToken = token;
-        console.log("SOCKET CONNECTED");
+        // console.log("SOCKET CONNECTED");
 
         client.subscribe("/user/queue/notifications", (message) => {
           if (!message.body) return;
 
+          // console.log("========== SOCKET MESSAGE ==========");
+          // console.log("RAW:", message.body);
+
           const data = JSON.parse(message.body);
+
+          // console.log("PARSED:", data);
+          // console.log("CURRENT ORDER:", localStorage.getItem("orderNo"));
+          // console.log("===================================");
+
           const currentOrder = localStorage.getItem("orderNo");
 
           if (data.orderNo && data.orderNo !== currentOrder) return;
@@ -84,7 +95,7 @@ const usePaymentSocket = () => {
               }),
             );
           }
-          console.log("WS DATA:", data);
+          // console.log("WS DATA:", data);
 
           if (
             data.paymentStatus === "PAYMENT_FAILS" ||
@@ -102,14 +113,14 @@ const usePaymentSocket = () => {
         });
       },
 
-      onStompError: (frame) => {
-        console.error("STOMP ERROR:", frame);
-        console.error("MESSAGE:", frame.headers["message"]);
-        console.error("BODY:", frame.body);
-      },
+      // onStompError: (frame) => {
+      //   console.error("STOMP ERROR:", frame);
+      //   console.error("MESSAGE:", frame.headers["message"]);
+      //   console.error("BODY:", frame.body);
+      // },
 
       onWebSocketClose: () => {
-        console.log("SOCKET CLOSED");
+        // console.log("SOCKET CLOSED");
         globalClient = null;
         currentToken = null;
       },
@@ -120,7 +131,7 @@ const usePaymentSocket = () => {
 
     // ❌ ไม่ต้อง deactivate ทุกครั้ง
     return () => {
-      console.log("EFFECT CLEANUP (NO DISCONNECT)");
+      // console.log("EFFECT CLEANUP (NO DISCONNECT)");
     };
   }, [token, dispatch]);
 };

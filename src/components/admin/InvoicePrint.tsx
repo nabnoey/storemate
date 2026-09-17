@@ -1,8 +1,9 @@
 import React from "react";
-import type { OrderMod } from "../../types/moderator/ordersMod";
+import type { ShippingLabel, OrderMod } from "../../types/moderator/ordersMod";
 
 interface InvoicePrintProps {
   data: OrderMod[];
+  shippingLabel?: ShippingLabel[];
 }
 
 const forceColor: React.CSSProperties = {
@@ -73,12 +74,10 @@ export const InvoicePrint = React.forwardRef<HTMLDivElement, InvoicePrintProps>(
                 {/* ผู้ส่ง */}
                 <div>
                   <div style={blackLabelStyle}>ผู้ส่ง</div>
-                  <div style={{ fontSize: "12px", fontWeight: "600" }}>พัดทอง</div>
-                  <div style={{ fontSize: "12px" }}>099-999-9999</div>
+                  <div style={{ fontSize: "12px", fontWeight: "600" }}>{order.senderInfo?.name || "มะม่วงหาว มะนาวโห่ ตราพัดทอง"}</div>
+                  <div style={{ fontSize: "12px" }}>{order.senderInfo?.phone || "0812345678"}</div>
                   <div style={{ fontSize: "12px", color: "#222", marginTop: "2px" }}>
-                    199 ม.6 ต.ดอนกระเบื้อง อ.โพธาราม
-                    <br />
-                    จ.ราชบุรี 70120
+                    {order.senderInfo?.address || "199 ม.6"}
                   </div>
                 </div>
 
@@ -86,32 +85,36 @@ export const InvoicePrint = React.forwardRef<HTMLDivElement, InvoicePrintProps>(
                 <div>
                   <div style={blackLabelStyle}>ผู้รับ</div>
                   <div style={{ fontSize: "12px", fontWeight: "600" }}>
-                    {order.orderRecipient?.recipientName || "สมชาย ใจดี"}
+                    {order.receiverInfo?.name || order.recipientName}
                   </div>
                   <div style={{ fontSize: "12px" }}>
-                    {order.orderRecipient?.phone || "098-3809919"}
+                    {order.receiverInfo?.phone || order.phone}
                   </div>
                   <div style={{ fontSize: "12px", color: "#222", marginTop: "2px" }}>
-                    {order.orderRecipient?.district || "199 ม.6 116/1 ม.1 ต.ห้วยขวาง"}
-                    <br />
-                    {order.orderRecipient?.district && order.orderRecipient?.province && order.orderRecipient?.zipcode
-                      ? `${order.orderRecipient.district} ${order.orderRecipient.province} ${order.orderRecipient.zipcode}`
-                      : "อ.กำแพงแสน จ.นครปฐม 73140"}
+                    {order.receiverInfo?.address || 
+                      [
+                        order.orderRecipient?.streetAddress, 
+                        order.orderRecipient?.subdistrict, 
+                        order.orderRecipient?.district, 
+                        order.orderRecipient?.province, 
+                        order.orderRecipient?.zipcode
+                      ].filter(Boolean).join(" ")
+                    }
                   </div>
                 </div>
               </div>
 
               {/* แถบเลข order ดำเต็มแนว */}
               <div style={blackBarStyle}>
-                หมายเลขออเดอร์: {order.orderNo || "ORD-2026-001"}
+                หมายเลขออเดอร์: {order.orderNo}
               </div>
 
               {/* รายการสินค้า */}
               <div style={{ fontSize: "12px", marginBottom: "12px" }}>
-                {order.orderItems && order.orderItems.length > 0 ? (
-                  order.orderItems.map((item, idx) => (
+                {(order.shippingItems || order.orderItems) && (order.shippingItems || order.orderItems)?.length ? (
+                  (order.shippingItems || order.orderItems || []).map((item: any, idx: number) => (
                     <div
-                      key={item.id || idx}
+                      key={item.productName || item.id || idx}
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
@@ -158,13 +161,17 @@ export const InvoicePrint = React.forwardRef<HTMLDivElement, InvoicePrintProps>(
                 <div style={{ textAlign: "center" }}>
                   <div style={{ color: "#555" }}>มูลค่าสินค้า</div>
                   <div style={{ marginTop: "3px" }}>
-                    ฿ {order.total?.toLocaleString() || "0"}
+                    ฿ {order.total?.toLocaleString()}
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ color: "#555" }}>ช่องทางชำระเงิน</div>
                   <div style={{ marginTop: "3px", fontWeight: "500" }}>
-                    {order.checkoutType === "PROMPTPAY" ? "พร้อมเพย์ (PromptPay)" : order.checkoutType || "พร้อมเพย์ (PromptPay)"}
+                    {{
+                      DESTINATION: "เก็บเงินปลายทาง (COD)",
+                      PROMPTPAY: "พร้อมเพย์ (PromptPay)",
+                      CARD: "บัตรเครดิต / เดบิต"
+                    }[order.checkoutType as string] || order.checkoutType}
                   </div>
                 </div>
               </div>

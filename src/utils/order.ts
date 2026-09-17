@@ -22,7 +22,7 @@ export const statusConfig = {
     color: "text-red-500",
   },
   REFUNDED: {
-    tab: "คืนเงิน/คืนสินค้า",
+    tab: "คืนเงิน",
     color: "text-red-500",
   },
 } as const;
@@ -44,7 +44,7 @@ export const getOrderLabel = (
       case "CANCELLED":
         return "ยกเลิกคำสั่งซื้อ";
       case "REFUNDED":
-        return "คืนเงิน/คืนสินค้า";
+        return "คืนเงิน";
       default:
         return "-";
     }
@@ -63,7 +63,7 @@ export const getOrderLabel = (
     case "CANCELLED":
       return "ยกเลิกคำสั่งซื้อ";
     case "REFUNDED":
-      return "คืนเงิน/คืนสินค้า";
+      return "คืนเงิน";
     default:
       return "-";
   }

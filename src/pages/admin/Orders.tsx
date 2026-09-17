@@ -2,12 +2,17 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import HeaderAdmin from "../../components/admin/HeaderAdmin";
+import { Pagination } from "../../components/admin/Pagination";
 import { format } from "date-fns";
 import type { AppDispatch, RootState } from "../../redux/store";
-import { fetchAllOrders, shippingOrder } from "../../redux/moderator/ModeratorReducer";
+import {
+  fetchAllOrders,
+  shippingOrder,
+} from "../../redux/moderator/ModeratorReducer";
 import {
   STATUS_LABELS,
   STATUS_STYLES,
+  TIME_FILTER_MAP,
   type OrderMod,
 } from "../../types/moderator/ordersMod";
 import { InvoicePrint } from "../../components/admin/InvoicePrint";
@@ -15,17 +20,18 @@ import { toast } from "react-hot-toast";
 import { CiCalendar } from "react-icons/ci";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import "cally";
 import { useReactToPrint } from "react-to-print";
+import OwnerSkeletons from "../../components/loading/OwnerSkeletons";
 
 const formatDateTime = (isoString: string) => {
   if (!isoString) return { dateStr: "-", timeStr: "-" };
-  const dateObj = new Date(isoString);
-  const dateStr = `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear() + 543}`;
-  const hours = String(dateObj.getHours()).padStart(2, "0");
-  const minutes = String(dateObj.getMinutes()).padStart(2, "0");
-  return { dateStr, timeStr: `${hours}.${minutes} น.` };
+  const date = new Date(isoString);
+  // ใช้ date-fns จัดรูปแบบวัน/เดือน และชั่วโมง.นาที
+  const dateStr = `${format(date, "d/M/")}${date.getFullYear() + 543}`;
+  const timeStr = `${format(date, "HH.mm")} น.`;
+  return { dateStr, timeStr };
 };
+const PAGE_SIZE = 10;
 
 function Orders() {
   const dispatch = useDispatch<AppDispatch>();
@@ -35,64 +41,77 @@ function Orders() {
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [submittedSearchTerm, setSubmittedSearchTerm] = useState("");
-  
+
   // ✨ ระบบช่วงวันที่ (Date Range)
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  
+  const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
+  const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
+
   const [timeFilter, setTimeFilter] = useState("");
   const printRef = useRef<HTMLDivElement>(null);
   const [printData, setPrintData] = useState<OrderMod[]>([]);
-  const [isPrinting, setIsPrinting] = useState(false);
 
-  // 🛡️ ดึงข้อมูลจาก URL (ถ้า URL เป็น 0 ให้ UI มองเป็น 1)
+  //ดึงข้อมูลจาก URL (ถ้า URL เป็น 0 ให้ UI มองเป็น 1)
   const pageParam = searchParams.get("page");
   const initialPage = pageParam !== null ? Number(pageParam) + 1 : 1;
+  // เก็บสถานะหน้าปัจจุบัน
   const [currentPage, setCurrentPage] = useState(initialPage);
+  const { orders, totalPages, loading } = useSelector(
+    (state: RootState) => state.moderator,
+  );
 
-  const rawOrders = useSelector((state: RootState) => state.moderator.orders);
-  const orders = Array.isArray(rawOrders) ? rawOrders : [];
-  const totalPages = useSelector((state: RootState) => state.moderator.totalPages);
+  const periodValue =
+    TIME_FILTER_MAP[timeFilter as keyof typeof TIME_FILTER_MAP];
+  const formattedStartDate = filterStartDate
+    ? format(filterStartDate, "yyyy-MM-dd")
+    : undefined;
 
-  const PAGE_SIZE = 10;
-  const TIME_FILTER_MAP: Record<string, string> = {
-    "วันนี้": "today",
-    "สัปดาห์นี้": "week",
-    "เดือนนี้": "month",
-  };
+  const formattedEndDate = filterEndDate
+    ? format(filterEndDate, "yyyy-MM-dd")
+    : undefined;
 
   useEffect(() => {
-    const periodValue = TIME_FILTER_MAP[timeFilter];
-
-    const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : undefined;
-    const formattedEndDate = endDate ? format(endDate, "yyyy-MM-dd") : undefined;
-
     dispatch(
       fetchAllOrders({
-        page: currentPage - 1, 
+        page: currentPage - 1,
         size: PAGE_SIZE,
         keyword: submittedSearchTerm || undefined,
         startDate: formattedStartDate,
         endDate: formattedEndDate,
         period: periodValue,
-      })
+      }),
     );
+  }, [
+    dispatch,
+    currentPage,
+    submittedSearchTerm,
+    formattedStartDate,
+    formattedEndDate,
+    periodValue,
+  ]);
 
-  
-    const params: Record<string, string> = { 
-      page: String(currentPage - 1), 
-      size: String(PAGE_SIZE) 
+  useEffect(() => {
+    const params: Record<string, string> = {
+      page: String(currentPage - 1),
+      size: String(PAGE_SIZE),
     };
-    
+
     if (submittedSearchTerm) params.keyword = submittedSearchTerm;
     if (formattedStartDate) params.startDate = formattedStartDate;
     if (formattedEndDate) params.endDate = formattedEndDate;
     if (periodValue) params.period = periodValue;
-    
-    setSearchParams(params);
 
-  }, [dispatch, currentPage, setSearchParams, submittedSearchTerm, startDate, endDate, timeFilter]);
+    setSearchParams(params);
+  }, [
+    currentPage,
+    submittedSearchTerm,
+    formattedStartDate,
+    formattedEndDate,
+    periodValue,
+    setSearchParams,
+  ]);
 
   const reactToPrintFn = useReactToPrint({
     contentRef: printRef,
@@ -100,25 +119,19 @@ function Orders() {
   });
 
   useEffect(() => {
-    if (isPrinting && printData.length > 0) {
+    if (printData.length > 0) {
       const timer = setTimeout(() => {
         reactToPrintFn();
-        setIsPrinting(false);
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [isPrinting, printData, reactToPrintFn]);
-
-  const handlePageChange = (pageNumber: number) => {
-    if (pageNumber >= 1 && pageNumber <= totalPages) {
-      setCurrentPage(pageNumber);
-    }
-  };
+  }, [printData, reactToPrintFn]);
 
   const handleSelectOrder = (orderNo: string) => {
-    const key = String(orderNo);
-    setSelectedOrders((prev) =>
-      prev.includes(key) ? prev.filter((id) => id !== key) : [...prev, key]
+    setSelectedOrders((prevSelectedOrders) =>
+      prevSelectedOrders.includes(orderNo)
+        ? prevSelectedOrders.filter((id) => id !== orderNo)
+        : [...prevSelectedOrders, orderNo],
     );
   };
 
@@ -133,54 +146,30 @@ function Orders() {
   };
 
   const handleConfirmPrint = async () => {
-    const selectedData = orders.filter((o) =>
-      selectedOrders.includes(String(o.orderNo))
+    //selectedData รายการคำสั่งซื้อที่ผู้ใช้เลือกไว้
+    const selectedData = orders.filter((order) =>
+      selectedOrders.includes(order.orderNo),
     );
     if (selectedData.length === 0) return;
 
-    const invalidOrders = selectedData.filter((o) => o.status !== "PROCESSING");
-    if (invalidOrders.length > 0) {
-      toast.error("สามารถพิมพ์ใบปะหน้าได้เฉพาะคำสั่งซื้อสถานะ 'ที่ต้องจัดส่ง' เท่านั้น");
+    if (selectedData.some((order) => order.status !== "PROCESSING")) {
+      toast.error(
+        "สามารถพิมพ์ใบปะหน้าได้เฉพาะคำสั่งซื้อสถานะ 'ที่ต้องจัดส่ง' เท่านั้น",
+      );
       return;
     }
 
     try {
-      if (selectedData.length > 0) {
-        const orderIds = selectedData.map((order) => Number(order.id));
-        await dispatch(shippingOrder(orderIds)).unwrap();
-        // 🛠️ ตอนรีเฟรชข้อมูลก็ต้อง -1 ให้ API เหมือนกัน
-        dispatch(fetchAllOrders({ page: currentPage - 1, size: PAGE_SIZE }));
-      }
-      setPrintData(selectedData);
-      setIsPrinting(true);
+      const orderIds = selectedData.map((order) => order.id);
+      const printedLabels = await dispatch(shippingOrder(orderIds)).unwrap();
+      setPrintData(printedLabels);
     } catch {
       toast.error("ไม่สามารถอัปเดตสถานะการพิมพ์ใบปะหน้าได้");
     }
   };
 
-  const maxVisiblePages = 5;
-
-  const getVisiblePages = () => {
-    let start = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let end = start + maxVisiblePages - 1;
-
-    if (end > totalPages) {
-      end = totalPages;
-      start = Math.max(1, end - maxVisiblePages + 1);
-    }
-
-    const pages = [];
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    return pages;
-  };
-
-  const visiblePages = getVisiblePages();
-
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-start text-left w-full">
-      
       <div className="w-full flex flex-col items-start print:hidden">
         <HeaderAdmin
           title="จัดการคำสั่งซื้อ"
@@ -241,102 +230,105 @@ function Orders() {
                     className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 w-full sm:w-64"
                   />
 
-                 <div 
-  className={`
-    relative text-sm font-['Anuphan'] cursor-pointer
-    ${startDate && endDate ? "w-full" : "w-[140px]"}
-  `}
->
-  <input
-    type="text"
-    data-test="select-date"
-    readOnly
-    placeholder="เลือกช่วงเวลา"
-    value={
-      startDate && endDate
-        ? `${format(startDate, "dd/MM/yyyy")} - ${format(
-            endDate,
-            "dd/MM/yyyy"
-          )}`
-        : ""
-    }
-   onClick={() => {
-     setIsDatePickerOpen(!isDatePickerOpen); // 🛠️ แก้ไขให้กดเปิด-ปิดได้
-   }}
-    className={`
-    relative border border-gray-300 rounded px-3 py-2 text-sm 
-    focus:outline-none focus:ring-1 focus:ring-blue-500 
-    ${startDate && endDate ? "w-full" : "w-[140px]"}
-    text-gray-700 bg-white cursor-pointer
-  `}
-    
-    
-  />
+                  <div
+                    className={`
+                    relative text-sm font-['Anuphan'] cursor-pointer
+                    ${startDate && endDate ? "w-full" : "w-[140px]"}
+                  `}
+                  >
+                    <input
+                      type="text"
+                      data-test="select-date"
+                      readOnly
+                      placeholder="เลือกช่วงเวลา"
+                      value={
+                        startDate && endDate
+                          ? `${format(startDate, "dd/MM/yyyy")} - ${format(
+                              endDate,
+                              "dd/MM/yyyy",
+                            )}`
+                          : ""
+                      }
+                      onClick={() => {
+                        setIsDatePickerOpen(!isDatePickerOpen); // 🛠️ แก้ไขให้กดเปิด-ปิดได้
+                      }}
+                      className={`
+                    relative border border-gray-300 rounded px-3 py-2 text-sm 
+                    focus:outline-none focus:ring-1 focus:ring-blue-500 
+                    ${startDate && endDate ? "w-full" : "w-[140px]"}
+                    text-gray-700 bg-white cursor-pointer
+                  `}
+                    />
 
-    <CiCalendar 
-    className="
-      absolute
-      right-3
-      top-1/2
-      -translate-y-1/2
-      text-gray-500
-      pointer-events-none
-    "
-    size={18}
-  />
+                    <CiCalendar
+                      className="
+                      absolute
+                      right-3
+                      top-1/2
+                      -translate-y-1/2
+                      text-gray-500
+                      pointer-events-none
+                    "
+                      size={18}
+                    />
 
-  {isDatePickerOpen && (
-    <div
-      className="
-        absolute left-0 mt-2 z-50
-        bg-white border border-gray-200
-        shadow-xl rounded-2xl p-4
-      "
-    >
-      <DatePicker
-        selected={startDate}
-        onChange={(dates) => {
-          const [start, end] = dates as [Date | null, Date | null];
+                    {isDatePickerOpen && (
+                      <div
+                        className="
+                        absolute left-0 mt-2 z-50
+                        bg-white border border-gray-200
+                        shadow-xl rounded-2xl p-4
+                      "
+                      >
+                        <DatePicker
+                          selected={startDate}
+                          onChange={(dates) => {
+                            const [start, end] = dates as [
+                              Date | null,
+                              Date | null,
+                            ];
 
-          setStartDate(start);
-          setEndDate(end);
-        }}
-        startDate={startDate}
-        endDate={endDate}
-        selectsRange
-        inline
-        monthsShown={2}
-        minDate={startDate || undefined}
-      />
+                            setStartDate(start);
+                            setEndDate(end);
+                          }}
+                          startDate={startDate}
+                          endDate={endDate}
+                          selectsRange
+                          inline
+                          monthsShown={2}
+                          minDate={startDate || undefined}
+                        />
 
-      <div className="flex justify-end gap-3 mt-4">
-        <button
-          type="button"
-          onClick={() => {
-            setStartDate(null);
-            setEndDate(null);
-            setCurrentPage(1); // รีเซ็ตหน้ากลับไปหน้าแรกด้วย
-          }}
-          className="px-4 py-2 border rounded-lg cursor-pointer"
-        >
-          ล้างค่า
-        </button>
+                        <div className="flex justify-end gap-3 mt-4">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStartDate(null);
+                              setEndDate(null);
+                              setCurrentPage(1); // รีเซ็ตหน้ากลับไปหน้าแรกด้วย
+                            }}
+                            className="px-4 py-2 border rounded-lg cursor-pointer"
+                          >
+                            ล้างค่า
+                          </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setIsDatePickerOpen(false);
-            setCurrentPage(1); // ค้นหาปุ๊บ เริ่มที่หน้าแรกเสมอ
-          }}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer"
-        >
-          บันทึก
-        </button>
-      </div>
-    </div>
-  )}
-</div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFilterStartDate(startDate);
+                              setFilterEndDate(endDate);
 
+                              setIsDatePickerOpen(false);
+                              setCurrentPage(1); // ค้นหาปุ๊บ เริ่มที่หน้าแรกเสมอ
+                            }}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer"
+                          >
+                            บันทึก
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex rounded border border-gray-200 overflow-hidden text-xs font-medium self-end md:self-auto ">
@@ -361,7 +353,9 @@ function Orders() {
               </div>
             </div>
 
-            <h3 className="text-base font-bold text-gray-800 mb-4">คำสั่งซื้อ</h3>
+            <h3 className="text-base font-bold text-gray-800 mb-4">
+              คำสั่งซื้อ
+            </h3>
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left border-collapse">
@@ -392,12 +386,20 @@ function Orders() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
-                  {orders.length > 0 ? (
-                    orders.map((order: OrderMod) => {
-
-                      
-                      const { dateStr, timeStr } = formatDateTime(order.createdAt || "");
-                      const isSelected = selectedOrders.includes(String(order.orderNo));
+                  {loading ? (
+                    <OwnerSkeletons
+                      type="mod-table"
+                      rows={PAGE_SIZE}
+                      columns={7}
+                    />
+                  ) : orders.length > 0 ?  (
+                    orders.map((order) => {
+                      const { dateStr, timeStr } = formatDateTime(
+                        order.createdAt || "",
+                      );
+                      const isSelected = selectedOrders.includes(
+                        String(order.orderNo),
+                      );
 
                       return (
                         <tr
@@ -411,24 +413,34 @@ function Orders() {
                               {isPrintMode && (
                                 <button
                                   type="button"
-                                  onClick={() => handleSelectOrder(String(order.orderNo))}
+                                  onClick={() =>
+                                    handleSelectOrder(order.orderNo)
+                                  }
                                   className={`w-5 h-5 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors ${
                                     isSelected
                                       ? "bg-blue-700 border-blue-700"
                                       : "border-gray-300 bg-white"
                                   }`}
                                 >
-                                  {isSelected && <span className="text-white text-[10px]">✓</span>}
+                                  {isSelected && (
+                                    <span className="text-white text-[10px]">
+                                      ✓
+                                    </span>
+                                  )}
                                 </button>
                               )}
-                              <span className="text-gray-600 font-medium">{order.orderNo}</span>
+                              <span className="text-gray-600 font-medium">
+                                {order.orderNo}
+                              </span>
                             </div>
                           </td>
 
                           <td className="py-4 px-2 text-gray-800 font-medium">
                             {order.recipientName}
                           </td>
-                          <td className="py-4 px-2 text-gray-500">{order.phone}</td>
+                          <td className="py-4 px-2 text-gray-500">
+                            {order.phone}
+                          </td>
 
                           <td className="py-4 px-2 text-gray-500 text-xs leading-relaxed">
                             {dateStr}
@@ -448,41 +460,49 @@ function Orders() {
                           <td className="py-4 px-2">
                             <span
                               className={`inline-flex items-center px-3 py-[4px] rounded-full text-[11px] font-medium whitespace-nowrap ${
-                                STATUS_STYLES[order.status] || "bg-gray-100 text-gray-600"
+                                STATUS_STYLES[order.status] ||
+                                "bg-gray-100 text-gray-600"
                               }`}
                             >
                               {STATUS_LABELS[order.status] || order.status}
                             </span>
                           </td>
                           <td className="py-4 text-right text-xs space-x-3 pr-2">
-  {order.is_printed && (
-    <span className="text-[#60A5FA] text-xs font-medium">printed</span>
-  )}
-  {isPrintMode ? (
-    <button
-      type="button"
-      onClick={() => handleSelectOrder(String(order.orderNo))}
-      className="text-blue-600 hover:underline font-medium cursor-pointer"
-    >
-      {isSelected ? "ยกเลิก" : "เลือก"}
-    </button>
-  ) : (
-    <button
-      type="button"
-      data-test={`menagemate-order-${order.orderNo}`}
-      onClick={() => navigate(`/orders-management/${order.orderNo}`)}
-      className="text-blue-600 hover:underline font-medium cursor-pointer"
-    >
-      จัดการ
-    </button>
-  )}
-</td>
+                            {order.is_printed && (
+                              <span className="text-[#60A5FA] text-xs font-medium">
+                                printed
+                              </span>
+                            )}
+                            {isPrintMode ? (
+                              <button
+                                type="button"
+                                onClick={() => handleSelectOrder(order.orderNo)}
+                                className="text-blue-600 hover:underline font-medium cursor-pointer"
+                              ></button>
+                            ) : (
+                              <button
+                                type="button"
+                                data-test={`menagemate-order-${order.orderNo}`}
+                                onClick={() =>
+                                  navigate(
+                                    `/orders-management/${order.orderNo}`,
+                                  )
+                                }
+                                className="text-blue-600 hover:underline font-medium cursor-pointer"
+                              >
+                                จัดการ
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       );
                     })
                   ) : (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-gray-400 font-medium">
+                      <td
+                        colSpan={8}
+                        className="py-8 text-center text-gray-400 font-medium"
+                      >
                         ไม่มีรายการคำสั่งซื้อในระบบ
                       </td>
                     </tr>
@@ -492,54 +512,11 @@ function Orders() {
             </div>
 
             {/* Pagination Controls */}
-            <div className="flex justify-end items-center gap-4 mt-6 pt-4 border-t border-gray-100 text-sm">
-              <button
-                type="button"
-                disabled={currentPage === 1}
-                onClick={() => handlePageChange(currentPage - 1)}
-                className={`border border-gray-300 rounded-md px-4 py-1.5 font-medium transition-colors ${
-                  currentPage === 1
-                    ? "text-gray-300 cursor-not-allowed border-gray-200"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                ก่อนหน้า
-              </button>
-
-              <div className="flex font-normal font-['Anuphan'] items-center gap-1">
-                {visiblePages.length > 0 ? (
-                  visiblePages.map((page) => (
-                    <button
-                      key={page}
-                      type="button"
-                      onClick={() => handlePageChange(page)}
-                      className={`w-8 h-8 rounded-md flex items-center justify-center font-medium transition-colors ${
-                        page === currentPage
-                          ? "text-blue-500 font-bold bg-transparent"
-                          : "text-gray-500 hover:bg-gray-100"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))
-                ) : (
-                  <button type="button" className="w-8 h-8 text-blue-500 font-bold">1</button>
-                )}
-              </div>
-
-              <button
-                type="button"
-                disabled={currentPage === totalPages || totalPages === 0}
-                onClick={() => handlePageChange(currentPage + 1)}
-                className={`border border-gray-300 rounded-md px-4 py-1.5 font-medium transition-colors ${
-                  currentPage === totalPages || totalPages === 0
-                    ? "text-gray-300 cursor-not-allowed border-gray-200"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                ต่อไป
-              </button>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         </div>
       </div>

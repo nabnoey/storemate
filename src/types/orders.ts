@@ -22,22 +22,17 @@ export const statusConfig: Record<
   { label: string; color: string }
 > = {
   PENDING: { label: "ที่ต้องชำระ", color: "text-blue-500" },
-  PROCESSING: { label: "ที่ต้องจัดส่ง", color: "text-yellow-500" },
-  RECEIVED: { label: "ที่ต้องได้รับ", color: "text-orange-500" },
-  COMPLETED: { label: "สำเร็จแล้ว", color: "text-green-500" },
+  PROCESSING: { label: "ที่ต้องจัดส่ง", color: "text-[#3B82F6]" },
+  RECEIVED: { label: "ที่ต้องได้รับ", color: "text-[#1E40AF]" },
+  COMPLETED: { label: "คำสั่งซื้อสำเร็จ", color: "text-[#10B981]" },
   CANCELLED: { label: "ยกเลิกแล้ว", color: "text-red-500" },
   REFUNDED: { label: "คืนเงินแล้ว", color: "text-purple-500" },
   ALL: { label: "ทั้งหมด", color: "text-black" },
 };
 
-export const getOrderLabel = (
-  status: OrderStatus,
-  checkoutType?: string,
-): string => {
-  if (status === "PROCESSING" && checkoutType === "DESTINATION") {
-    return "ที่ต้องจัดส่ง (COD)";
-  }
 
+//แปลง สถานะของออเดอร์ (status) ให้เป็น ข้อความ
+export const getOrderLabel = (status: OrderStatus): string => {
   return statusConfig[status]?.label || status;
 };
 
@@ -52,26 +47,25 @@ export interface OrderItem {
 }
 
 export interface OrderRecipient {
-  recipientName?: string;
-  phone?: string;
-    streetAddress?: string;
-  subdistrict?: string;
-  district?: string;
-  province?: string;
-  zipcode?: string;
+  recipientName: string;
+  phone: string;
+  streetAddress: string;
+  subdistrict: string;
+  district: string;
+  province: string;
+  zipcode: string;
 }
 
 export interface Order {
   id: number;
   orderNo: string;
   status: OrderStatus;
-  totalPrice: number;
   statusDelivery?: string;
   checkoutType: PaymentMethod;
 
-  orderAddress: OrderAddress[];
   orderItems: OrderItem[];
-  orderRecipient?: OrderRecipient | null;
+  orderAddress: OrderAddress[]; //ใช้กับorderDetail
+  orderRecipient: OrderRecipient; //ใช้กับorderDetail
 
   total: number;
   createdAt: string;
@@ -86,7 +80,7 @@ export interface OrdersState {
 
 export interface StatusOrderTabsProps {
   activeTab: string;
-  onTabChange: (tabName: string) => void;
+   onTabChange: (tabName: OrderStatus) => void;
 }
 
 export interface RefundRequest {

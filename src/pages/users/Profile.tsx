@@ -10,7 +10,7 @@ import {
 } from "../../redux/auth/authReducer";
 import type { RootState } from "../../redux/store";
 import ProfileSidebar from "../../components/user/ProfileSidebar";
-import Loading from "../../components/loading/Loading";
+// import Loading from "../../components/loading/Loading";
 import { Icon } from "@iconify/react";
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -145,7 +145,7 @@ const ProfilePage = () => {
     phone: "",
     image: "",
   });
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [imageUploadStep, setImageUploadStep] = useState<"upload" | "crop">(
     "upload",
@@ -162,7 +162,7 @@ const ProfilePage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setLoading(true);
+    // setLoading(true);
     if (user) {
       setTempData({
         name: user.name,
@@ -171,7 +171,7 @@ const ProfilePage = () => {
         image: user.image_url || user.image || "",
       });
     }
-    setLoading(false);
+    // setLoading(false);
   }, [user]);
 
   useEffect(() => {
@@ -183,14 +183,12 @@ const ProfilePage = () => {
   const allowedTypes = ["image/png", "image/jpeg", "image/jpg"];
   const processFile = (file: File) => {
     if (!allowedTypes.includes(file.type)) {
-      toast.error("รองรับเฉพาะไฟล์ PNG, JPEG และ JPG", { duration: 1500 });
+      toast.error("รองรับเฉพาะไฟล์ PNG, JPEG และ JPG");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("ขนาดไฟล์ต้องไม่เกิน 5 MB", {
-        duration: 1500,
-      });
+      toast.error("ขนาดไฟล์ต้องไม่เกิน 5 MB");
       return;
     }
     const reader = new FileReader();
@@ -230,7 +228,7 @@ const ProfilePage = () => {
   );
 
   const handleSaveCrop = async () => {
-    const toastId = toast.loading("กำลังอัปเดตรูปโปรไฟล์...");
+    // const toastId = toast.loading("กำลังอัปเดตรูปโปรไฟล์...");
 
     try {
       if (rawImageSrc && croppedAreaPixels) {
@@ -255,18 +253,19 @@ const ProfilePage = () => {
         await dispatch(updateProfile(formData) as any).unwrap();
         await dispatch(getProfile() as any).unwrap();
 
-        toast.success("แก้ไขข้อมูลโปรไฟล์สำเร็จ", { duration: 1500 });
+        toast.success("แก้ไขข้อมูลโปรไฟล์สำเร็จ");
 
         setIsImageModalOpen(false);
         setRawImageSrc(null);
         setImageUploadStep("upload");
         setZoom(1);
       }
-    } catch (e: any) {
-      console.error(e);
-      const errorMessage =
-        typeof e === "string" ? e : "เกิดข้อผิดพลาดในการบันทึกรูปภาพ";
-      toast.error(errorMessage, { id: toastId });
+    } catch (error: any) {
+      toast.error(
+        typeof error === "string"
+          ? error
+          : "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
+      );
     }
   };
 
@@ -282,15 +281,13 @@ const ProfilePage = () => {
       if (activeModal === "email") {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(tempData.email)) {
-          toast.error("กรุณากรอกอีเมลให้ถูกต้อง", { duration: 1500 });
+          toast.error("กรุณากรอกอีเมลให้ถูกต้อง");
           return;
         }
       }
 
       if (tempData.phone && !/^0\d{9}$/.test(tempData.phone)) {
-        toast.error("เบอร์โทรต้องขึ้นต้นด้วย 0 และมี 10 หลัก", {
-          duration: 1500,
-        });
+        toast.error("เบอร์โทรต้องขึ้นต้นด้วย 0 และมี 10 หลัก");
         return;
       }
 
@@ -310,19 +307,19 @@ const ProfilePage = () => {
       await dispatch(updateProfile(formData) as any).unwrap();
 
       if (tempData.email !== user.email) {
-        toast.success("แก้ไขข้อมูลโปรไฟล์สำเร็จ", { duration: 1500 });
+        toast.success("แก้ไขข้อมูลโปรไฟล์สำเร็จ");
         setActiveModal(null);
 
         setTimeout(() => {
           dispatch(logout());
           window.location.href = "/login";
-        }, 2000);
+        });
         return;
       }
 
       await dispatch(getProfile() as any).unwrap();
 
-      toast.success("แก้ไขข้อมูลโปรไฟล์สำเร็จ", { duration: 1500 });
+      toast.success("แก้ไขข้อมูลโปรไฟล์สำเร็จ");
       setActiveModal(null);
       setImageFileForUpload(null);
     } catch (error: any) {
@@ -332,7 +329,7 @@ const ProfilePage = () => {
           ? error
           : "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง";
 
-      toast.error(errorMessage, { duration: 1500 });
+      toast.error(errorMessage);
     }
   };
 
@@ -356,13 +353,13 @@ const ProfilePage = () => {
     return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear() + 543}`;
   };
 
-  if (loading) return <Loading />;
+  // if (loading) return <Loading />;
   if (!user) return <Navigate to="/login" replace />;
 
   return (
-    <div className="min-h-screen bg-white font-anuphan text-gray-950 pt-10 sm:pt-20 pb-20">
-      <div className="max-w-[1200px] mx-auto px-4">
-        <nav className="hidden md:flex items-center text-sm text-black mb-4 font-medium">
+    <div className="min-h-screen bg-white font-anuphan text-gray-950 pt-10 sm:pt-5 pb-20">
+      <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 lg:px-5 pt-5 md:pt-6">
+        <nav className="hidden md:hidden lg:flex flex-wrap items-center text-md text-black mb-4 md:mb-8 font-medium">
           <Link
             data-test="click-home"
             to="/"
@@ -374,7 +371,14 @@ const ProfilePage = () => {
             icon="material-symbols:chevron-right-rounded"
             className="w-5 h-5 mx-1 text-black"
           />
-          <span className="text-black">โปรไฟล์</span>
+          <Link to="/profile" className="transition-colors cursor-pointer">
+            โปรไฟล์
+          </Link>
+          <Icon
+            icon="material-symbols:chevron-right-rounded"
+            className="w-5 h-5 mx-1 text-black"
+          />
+          <span className="text-black">แก้ไขโปรไฟล์</span>
         </nav>
 
         <div className="md:hidden bg-white pt-2 pb-4">
@@ -403,7 +407,7 @@ const ProfilePage = () => {
           <ProfileSidebar />
 
           <main className="flex flex-col w-full lg:min-w-[800px] min-h-[427px] bg-[#F9FAFB] md:bg-white rounded-[4px] shadow-[0_0_10px_rgba(0,0,0,0.05)] border-b md:border border-gray-200 px-4 py-3 md:py-6 gap-[9px] relative">
-            <div className="hidden sm:block w-full mb-6 md:mb-8">
+            <div className="hidden sm:hidden md:block w-full mb-6 md:mb-8">
               <h1 className="text-[20px] font-bold text-black">ข้อมูลของฉัน</h1>
               <p className="text-[14px] mt-1 text-black">
                 จัดการข้อมูลส่วนตัวคุณเพื่อความปลอดภัยของบัญชีผู้ใช้นี้

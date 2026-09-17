@@ -1,73 +1,94 @@
-# React + TypeScript + Vite
+# 🛍️ StoreMate
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> E-commerce Platform สำหรับการซื้อสินค้าออนไลน์และการจัดการร้านค้า
 
-Currently, two official plugins are available:
+StoreMate คือระบบ E-commerce ที่พัฒนาขึ้นเพื่อรองรับทั้ง **ผู้ซื้อสินค้า** และ **ผู้ดูแลร้านค้า** 
+โดยผู้ใช้สามารถค้นหาและเลือกซื้อสินค้า จัดการตะกร้าสินค้า ที่อยู่ การชำระเงิน และติดตามคำสั่งซื้อได้
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+ในส่วนของผู้ดูแลร้านค้า สามารถจัดการสินค้า Stock คำสั่งซื้อ ข้อมูลผู้ใช้งาน 
+ดู Dashboard และรายงานยอดขาย รวมถึงจัดการโปรโมชั่นและการแจ้งเตือนต่าง ๆ
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## ✨ Features
 
-## Expanding the ESLint configuration
+### 👤 Customer
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- 🔐 สมัครสมาชิก / เข้าสู่ระบบ
+- 🔑 ระบบ Authentication และ Authorization
+- 🛍️ ดูรายการสินค้า
+- 🔎 ค้นหาและกรองสินค้า
+- 📦 ดูรายละเอียดสินค้า
+- 🛒 เพิ่มสินค้าในตะกร้า
+- ➕➖ เพิ่ม / ลดจำนวนสินค้า
+- ☑️ เลือกสินค้าที่ต้องการสั่งซื้อ
+- 📍 จัดการที่อยู่จัดส่ง
+- 💳 รองรับการชำระเงิน
+  - QR PromptPay
+  - Credit / Debit Card
+  - Cash on Delivery
+- 📋 ดูประวัติคำสั่งซื้อ
+- 🚚 ติดตามสถานะคำสั่งซื้อ
+- ⭐ รีวิวสินค้า
+- 🔔 รับการแจ้งเตือน
+- ❤️ จัดการสินค้าที่สนใจ
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 🏪 Store / Admin
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- 📊 Dashboard
+- 📈 ดูรายงานยอดขาย
+- 📦 จัดการสินค้า
+- 🏷️ จัดการ Stock
+- 🛒 จัดการคำสั่งซื้อ
+- 👥 จัดการผู้ใช้งาน
+- 🏪 จัดการข้อมูลร้านค้า
+- 🔔 จัดการการแจ้งเตือน
+- 🎁 จัดการโปรโมชั่น
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🛠️ Tech Stack
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Frontend
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+| Technology | Purpose |
+|---|---|
+| React | Frontend Framework |
+| TypeScript | Type-safe Development |
+| Vite | Development & Build Tool |
+| React Router | Routing |
+| Redux Toolkit | State Management |
+| Axios | API Communication |
+| Tailwind CSS | Styling |
+| DaisyUI | UI Components |
+| Material UI | UI Components |
+| Formik | Form Management |
+| Yup | Form Validation |
+| React Hot Toast | Notifications |
+| Recharts | Data Visualization |
+| Leaflet / React Leaflet | Map & Location |
+| Stripe | Payment Integration |
+| Vitest | Testing |
+
+---
+
+## 🏗️ Project Architecture
+
+StoreMate ใช้โครงสร้างแบบแยกส่วน เพื่อให้สามารถพัฒนาและดูแลระบบได้ง่าย
+
+```text
+src/
+├── assets/          # Images and static assets
+├── components/      # Reusable UI Components
+├── hooks/           # Custom React Hooks
+├── layouts/         # Application Layouts
+├── pages/           # Application Pages
+├── redux/           # Redux Store, Slices and Thunks
+├── router/          # Application Routing
+├── services/        # API Services
+├── tests/           # Test Files
+├── types/           # TypeScript Types
+├── utils/            # Utility Functions
+├── App.tsx
+└── main.tsx
+

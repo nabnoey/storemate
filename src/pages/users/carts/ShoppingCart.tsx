@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../../redux/store";
@@ -11,95 +11,35 @@ import {
 } from "../../../redux/carts/CartReducer";
 
 import { Icon } from "@iconify/react";
-import { type Toast, toast } from "react-hot-toast";
-// import Loading from "../../../components/loading/Loading";
-import type { CartItem } from "../../../types/cartItem";
-
-interface ConfirmToastProps {
-  t: Toast;
-  message: string;
-  onResolve: (value: boolean) => void;
-  setIsBlocking: (value: boolean) => void;
-}
-
-const ConfirmToastUI = ({
-  t,
-  message,
-  onResolve,
-  setIsBlocking,
-}: ConfirmToastProps) => {
-  const handleConfirm = () => {
-    toast.dismiss(t.id);
-    setIsBlocking(false);
-    onResolve(true);
-  };
-
-  const handleCancel = () => {
-    toast.dismiss(t.id);
-    setIsBlocking(false);
-    onResolve(false);
-  };
-
-  return (
-    <div className="flex flex-col gap-3 items-center p-2">
-      <span className="text-gray-800 font-medium text-base">{message}</span>
-      <div className="flex gap-3 mt-2">
-        <button
-          onClick={handleConfirm}
-          className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-        >
-          ยืนยัน
-        </button>
-        <button
-          onClick={handleCancel}
-          className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-        >
-          ยกเลิก
-        </button>
-      </div>
-    </div>
-  );
-};
+import { toast } from "react-hot-toast";
+import ConfirmToast from "../../../components/ConfirmToast";
 
 const ShoppingCart = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { items: cartItems = [], status: cartStatus } = useSelector(
-    (state: RootState) => state.carts,
-  );
+  const cartItems = useSelector(
+  (state: RootState) => state.carts.items,
+);
 
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  //ล็อคสินค้าที่กำลังอัพเดทจำนวนสินค้า เพื่อไม่ให้กดซ้ำ
+  const [updatingItems, setUpdatingItems] = useState<number[]>([]);
   const [isBlocking, setIsBlocking] = useState(false);
 
   useEffect(() => {
     dispatch(fetchCartThunk());
   }, [dispatch]);
 
-  const enrichedCartItems = useMemo(() => {
-    return cartItems.map((item: CartItem) => {
-      const isAvailable = item.productStatus === "ACTIVE";
-      return {
-        ...item,
-        isAvailable,
-        product: {
-          id: item.productId,
-          productName: item.productName,
-          price: item.price,
-          imageUrl: item.imageUrl,
-          stockQuantity: item.stockQuantity,
-          productStatus: item.productStatus,
-        },
-      };
-    });
-  }, [cartItems]);
+
 
   // เอาไว้กรองสินค้าที่มีสถานะ พร้อมจำหน่าย
-  const availableItems = useMemo(
-    () => enrichedCartItems.filter((item) => item.isAvailable),
-    [enrichedCartItems],
-  );
+const availableItems = useMemo(
+  () => cartItems.filter((item) => item.productStatus === "ACTIVE"),
+  [cartItems],
+);
 
+ //เลือกสินค้าที่ พร้อมจำหน่าย 
   const isAllSelected = useMemo(() => {
     return (
       availableItems.length > 0 &&
@@ -107,44 +47,49 @@ const ShoppingCart = () => {
     );
   }, [availableItems.length, selectedItems.length]);
 
-  const selectedCartItems = useMemo(() => {
-    return enrichedCartItems
-      .filter((item) => selectedItems.includes(item.productId))
-      .map((item) => ({ ...item, cartItemId: item.cartItemId }));
-  }, [enrichedCartItems, selectedItems]);
+ //สินค้าในรถเข็นที่ผู้ใช้เลือกไว้ 
+const selectedCartItems = useMemo(() => {
+  return cartItems.filter((item) =>
+    selectedItems.includes(item.productId)
+  );
+}, [cartItems, selectedItems]);
 
   const subtotal = useMemo(() => {
     return selectedCartItems.reduce(
-      (sum, item) => sum + item.product.price * item.quantity,
+      (sum, item) => sum + item.price * item.quantity,
       0,
     );
   }, [selectedCartItems]);
 
-  const confirmAction = useCallback((message: string): Promise<boolean> => {
+
+  const confirmAction = (message: string): Promise<boolean> => {
     return new Promise((resolve) => {
       setIsBlocking(true);
       toast(
         (t) => (
-          <ConfirmToastUI
-            t={t}
-            message={message}
-            onResolve={resolve}
-            setIsBlocking={setIsBlocking}
-          />
+         <ConfirmToast
+          t={t}
+          message={message}
+          onResolve={resolve}
+          setIsBlocking={setIsBlocking}
+        />
         ),
         { duration: Infinity, position: "top-center" },
       );
     });
-  }, []);
+  };
 
+
+  //เลือกสินค้า
   const toggleSelect = (productId: number) => {
     setSelectedItems((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
+      prev.includes(productId) 
+        ? prev.filter((id) => id !== productId) 
         : [...prev, productId],
     );
   };
 
+  //เลือกสินค้าทั้งหมด หรือ ยกเลิกการเลือกทั้งหมด
   const toggleSelectAll = () => {
     setSelectedItems(
       isAllSelected ? [] : availableItems.map((item) => item.productId),
@@ -157,7 +102,7 @@ const ShoppingCart = () => {
 
     dispatch(deleteCartItemThunk(productId));
     setSelectedItems((prev) => prev.filter((id) => id !== productId));
-    toast.success("ลบสินค้าแล้ว", { duration: 1500 });
+    toast.success("ลบสินค้าแล้ว");
   };
 
   const handleRemoveSelected = async () => {
@@ -171,56 +116,91 @@ const ShoppingCart = () => {
     );
     if (!isConfirmed) return;
 
+    //Promise ทุกตัวใน array ทำงานเสร็จทั้งหมด แล้วค่อยทำคำสั่งต่อไป
     await Promise.all(
       selectedItems.map((id) => dispatch(deleteCartItemThunk(id))),
     );
 
     setSelectedItems([]);
-    toast.success("ลบสินค้าสำเร็จ", { duration: 1500 });
+    toast.success("ลบสินค้าสำเร็จ");
   };
 
-  const handleIncreaseQuantity = (
-    productId: number,
-    currentQuantity: number,
-    stockQuantity: number,
-  ) => {
-    if (currentQuantity >= stockQuantity) {
-      toast.error("ขออภัย สินค้าชิ้นนี้มีจำนวนจำกัดในคลังไม่สามารถเพิ่มได้",{duration:1500});
-      return;
-    }
-    dispatch(incrementCartItemThunk(productId));
-  };
+  const handleIncreaseQuantity = async (
+  productId: number,
+  quantity: number,
+  stockQuantity: number,
+) => {
+  // ถ้ากำลังยิง API อยู่ ห้ามกดซ้ำ
+  if (updatingItems.includes(productId)) return;
+
+  // ถึงจำนวนสูงสุดแล้ว
+  if (quantity >= stockQuantity) {
+    toast.error(
+      "ขออภัย สินค้าชิ้นนี้มีจำนวนจำกัดในคลังไม่สามารถเพิ่มได้",
+    );
+    return;
+  }
+
+  setUpdatingItems((prev) => [...prev, productId]);
+
+  try {
+    await dispatch(
+      incrementCartItemThunk(productId),
+    ).unwrap();
+  } finally {
+    setUpdatingItems((prev) =>
+      prev.filter((id) => id !== productId),
+    );
+  }
+};
 
   const handleDecreaseQuantity = async (
-    productId: number,
-    currentQuantity: number,
-  ) => {
-    if (currentQuantity === 1) {
-      const isConfirmed = await confirmAction(
-        "คุณต้องการลบสินค้านี้ใช่หรือไม่?",
+  productId: number,
+  quantity: number,
+) => {
+  // ถ้าสินค้านี้กำลังยิง API อยู่ ห้ามยิงซ้ำ
+  if (updatingItems.includes(productId)) return;
+
+  // quantity = 1 → ลบสินค้า
+  if (quantity === 1) {
+    const isConfirmed = await confirmAction(
+      "คุณต้องการลบสินค้านี้ใช่หรือไม่?",
+    );
+
+    if (!isConfirmed) return;
+
+    setUpdatingItems((prev) => [...prev, productId]);
+
+    try {
+      await dispatch(deleteCartItemThunk(productId)).unwrap();
+
+      setSelectedItems((prev) =>
+        prev.filter((id) => id !== productId),
       );
 
-      if (!isConfirmed) return;
-
-      dispatch(deleteCartItemThunk(productId));
-
-      setSelectedItems((prev) => prev.filter((id) => id !== productId));
-
-      toast.success("ลบสินค้าแล้ว", { duration: 1500 });
-
-      return;
+      toast.success("ลบสินค้าแล้ว");
+    } finally {
+      setUpdatingItems((prev) =>
+        prev.filter((id) => id !== productId),
+      );
     }
 
-    dispatch(decrementCartItemThunk(productId));
-  };
-
-  if (cartStatus === "loading") {
-    // return (
-    //   <div className="min-h-screen flex items-center justify-center">
-    //     <Loading />
-    //   </div>
-    // );
+    return;
   }
+
+  // quantity > 1 → decrement
+  setUpdatingItems((prev) => [...prev, productId]);
+
+  try {
+    await dispatch(decrementCartItemThunk(productId)).unwrap();
+  } finally {
+    setUpdatingItems((prev) =>
+      prev.filter((id) => id !== productId),
+    );
+  }
+};
+
+
 
   return (
     <div className="min-h-screen bg-white py-6 sm:py-12 px-4 font-anuphan">
@@ -258,7 +238,7 @@ const ShoppingCart = () => {
             <div className="hidden md:block w-full border-b border-black mt-4" />
           </div>
 
-          {enrichedCartItems.length > 0 ? (
+          {cartItems.length > 0 ? (
             <div className="space-y-6">
               <div className="flex justify-between items-center pb-4 border-b border-gray-100">
                 <span className="text-md sm:text-xl font-bold text-gray-700">
@@ -272,7 +252,7 @@ const ShoppingCart = () => {
                 </button>
               </div>
               <div className="max-h-[250px] overflow-y-auto mb-10 pr-2 ">
-                {enrichedCartItems.map((item) => (
+                {cartItems.map((item) => (
                   <div
                     key={item.productId}
                     className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 py-4 border-b border-gray-50 last:border-0"
@@ -282,7 +262,7 @@ const ShoppingCart = () => {
                       <div className="flex items-center pt-2 md:pt-0">
                         <input
                           type="checkbox"
-                          disabled={!item.isAvailable}
+                          disabled={item.productStatus !== "ACTIVE"}
                           checked={selectedItems.includes(item.productId)}
                           onChange={() => toggleSelect(item.productId)}
                           data-test={`checkbox-product-${item.productId}`}
@@ -292,7 +272,7 @@ const ShoppingCart = () => {
 
                       <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden not-last:p-1 flex-shrink-0">
                         <img
-                          src={item.product.imageUrl || ""}
+                          src={item.imageUrl || ""}
                           alt=""
                           className="w-full h-full object-contain"
                         />
@@ -300,17 +280,18 @@ const ShoppingCart = () => {
 
                       <div className="flex-1 min-w-0 px-2">
                         <h3 className="text-[16px] font-medium text-gray-800 leading-snug mb-2 line-clamp-2">
-                          {item.product.productName}
+                          {item.productName}
                         </h3>
 
                         <span
                           className={`text-[10px] px-2 py-1 rounded-md font-md inline-block ${
-                            item.isAvailable
+                            item.productStatus === "ACTIVE"
+
                               ? "bg-green-50 text-green-500"
                               : "bg-red-50 text-red-500"
                           }`}
                         >
-                          {item.isAvailable
+                          {item.productStatus  === "ACTIVE"
                             ? "พร้อมจำหน่าย"
                             : "ไม่พร้อมจำหน่าย"}
                         </span>
@@ -327,7 +308,7 @@ const ShoppingCart = () => {
 
                     <div className="flex items-center justify-between md:justify-end w-full md:w-auto pl-8 md:pl-0 gap-4">
                       <div className="hidden md:block text-md font-medium text-black w-20 text-center">
-                        ฿ {item.product.price}
+                        ฿ {item.price}
                       </div>
 
                       <div className="flex items-center border border-gray-200 rounded-md h-9 bg-white overflow-hidden flex-shrink-0">
@@ -339,8 +320,8 @@ const ShoppingCart = () => {
                               item.quantity,
                             )
                           }
-                          disabled={!item.isAvailable}
-                          className="px-2 text-black flex items-center justify-center h-full cursor-pointer hover:bg-gray-50"
+                          disabled={item.productStatus !== "ACTIVE" || updatingItems.includes(item.productId)}
+                            className="px-2 text-black flex items-center justify-center h-full cursor-pointer hover:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                         >
                           <Icon icon="lucide:minus" width="14" height="14" />
                         </button>
@@ -356,10 +337,10 @@ const ShoppingCart = () => {
     handleIncreaseQuantity(
       item.productId,
       item.quantity,
-      item.product.stockQuantity,
+      item.stockQuantity,
     )
   }
-  disabled={!item.isAvailable}
+  disabled={item.productStatus !== "ACTIVE" || updatingItems.includes(item.productId)}
   className="px-2 text-black flex items-center justify-center h-full cursor-pointer hover:bg-gray-50 disabled:cursor-not-allowed"
 >
   <Icon icon="lucide:plus" width="14" height="14" />
@@ -368,7 +349,7 @@ const ShoppingCart = () => {
 
                       <div className="text-blue-500 font-md w-20 md:w-24 text-right md:text-center"
                       data-test="subtotal-product">
-                        ฿{(item.product.price * item.quantity).toLocaleString()}
+                        ฿{(item.subTotal.toLocaleString())}
                       </div>
 
                       {/* ปุ่มลบสำหรับ Desktop */}

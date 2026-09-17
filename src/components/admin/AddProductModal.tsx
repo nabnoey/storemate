@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { useDispatch } from "react-redux";
@@ -6,29 +6,12 @@ import type { AppDispatch } from "../../redux/store";
 import {
   addProduct,
   editProduct,
-  getproducts,
   deleteProduct,
 } from "../../redux/moderator/ModeratorReducer";
-import {fetchProductById} from "../../redux/products/productReducer"
-import type { ProductMod } from "../../types/moderator/productMod";
-import type { Product } from "../../types/product";
+import {fetchProductById,fetchProducts} from "../../redux/products/productReducer"
+import type {  AddProductModalProps,ProductFormValues} from "../../types/moderator/productMod";
+import type { Product, ProductImage } from "../../types/product";
 import { toast } from "react-hot-toast";
-
-interface AddProductModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess?: () => void;
-  product?: ProductMod | null ;
-}
-
-interface FormValues {
-  productName: string;
-  categoryName: string;
-  price: number | "";
-  stockQuantity: number | "";
-  status: "ACTIVE" | "INACTIVE";
-  description: string;
-}
 
 const CATEGORY_MAP: Record<string, number> = {
   โปรโมชั่น: 1,
@@ -46,29 +29,18 @@ const normalizeCategory = (category: string | number | undefined): string => {
   if (!category) return "";
   const catStr = String(category).toLowerCase().trim();
 
-  if (["1", "promotion", "โปรโมชั่น"].includes(catStr))
-    return "โปรโมชั่น";
-  if (["2", "soap", "สบู่"].includes(catStr)) return "สบู่";
-  if (["3", "drinks", "เครื่องดื่ม"].includes(catStr))
-    return "เครื่องดื่ม";
-  if (["4","shampoo", "แชมพูสมุนไพร"].includes(catStr))
-    return "แชมพูสมุนไพร";
+   if (["1", "promotion"].includes(catStr)) return "โปรโมชั่น";
+  if (["2", "soap"].includes(catStr)) return "สบู่";
+  if (["3", "drinks"].includes(catStr)) return "เครื่องดื่ม";
+  if (["4", "shampoo"].includes(catStr)) return "แชมพู";
 
   return String(category);
 };
 
-
 const normalizeStatus = (
-  status?: string 
+  status?: string,
 ): "ACTIVE" | "INACTIVE" => {
-
-  const inactive = [
-    "INACTIVE",
-  ];
-
-  return inactive.includes(status ?? "")
-    ? "INACTIVE"
-    : "ACTIVE";
+  return status === "INACTIVE" ? "INACTIVE" : "ACTIVE";
 };
 
 
@@ -87,6 +59,8 @@ const ProductSchema = Yup.object().shape({
   description: Yup.string().required("กรอกข้อมูลสินค้าไม่ครบถ้วน"),
 });
 
+
+
 export const AddProductModal: React.FC<AddProductModalProps> = ({
   isOpen,
   onClose,
@@ -96,14 +70,15 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State สำหรับจัดการรูปภาพหลายรูป
-  const [existingImages, setExistingImages] = useState<
-    { id: number; url: string }[]
-  >([]);
+const [existingImages, setExistingImages] = useState<
+  { id: number; url: string; imageName: string }[]
+>([]);
+
   const [newImages, setNewImages] = useState<{ file: File; preview: string }[]>(
     [],
   );
   const [removedImageIds, setRemovedImageIds] = useState<number[]>([]);
-  const [brokenImageIds, setBrokenImageIds] = useState<number[]>([]); 
+ 
 
   const [fullProduct, setFullProduct] = useState<Product | null>(null);
   const dispatch = useDispatch<AppDispatch>();
@@ -124,8 +99,10 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
       if (detail.productImages?.length > 0) {
         setExistingImages(
-          detail.productImages.map((img:Product ) => ({
+          detail.productImages.map((img: ProductImage) => ({
+            id: img.id,
             url: img.imageUrl,
+            imageName: img.imageName,
           })),
         );
       }
@@ -135,11 +112,12 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         setExistingImages([]);
         setNewImages([]);
         setRemovedImageIds([]);
-        setBrokenImageIds([]);
         setFullProduct(null);
       }
     };
     fetchDetail();
+
+    
 
     return () => {
       isMounted = false;
@@ -153,9 +131,16 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     else onClose();
   };
 
-  const refreshProductList = () => {
-    dispatch(getproducts({ page: 0, size: 1000, keyword: "" }));
-  };
+const handleUploadClick = () => {
+  const totalImages = existingImages.length + newImages.length;
+
+  if (totalImages >= 5) {
+    toast.error("สามารถเพิ่มรูปสินค้าได้สูงสุด 5 รูป");
+    return;
+  }
+
+  fileInputRef.current?.click();
+};
 
   const showConfirmToast = (
     message: string,
@@ -207,11 +192,10 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
     try {
       await dispatch(deleteProduct(product.id)).unwrap();
-      toast.success("ลบสินค้าเรียบร้อยแล้ว",{duration:1500});
-      refreshProductList();
+      toast.success("ลบสินค้าเรียบร้อยแล้ว");
       handleCloseModal();
     } catch{
-      toast.error("ไม่สามารถลบสินค้าที่มีประวัติการสั่งซื้อได้",{duration:2000});
+      toast.error("ไม่สามารถลบสินค้าที่มีประวัติการสั่งซื้อได้");
 
       
     }
@@ -230,32 +214,68 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     if (isConfirmed) onClose();
   };
 
-  const handleFileChange = (files: FileList | null) => {
-    if (!files) return;
-    const validFiles: { file: File; preview: string }[] = [];
+const handleFileChange = (files: FileList | null) => {
+  if (!files) return;
 
-    Array.from(files).forEach((file) => {
-      if (
-        ["image/png", "image/jpeg", "image/jpg"].includes(file.type) &&
-        file.size <= 5 * 1024 * 1024
-      ) {
-        validFiles.push({ file, preview: URL.createObjectURL(file) });
-      } else {
-        toast.error(`ไฟล์ ${file.name} ไม่รองรับ หรือขนาดใหญ่เกิน 5MB`,{duration:1500});
-      }
+  const validFiles: { file: File; preview: string }[] = [];
+
+  Array.from(files).forEach((file) => {
+    // ตรวจสอบประเภทและขนาดไฟล์
+    if (
+      !["image/png", "image/jpeg", "image/jpg"].includes(file.type) ||
+      file.size > 5 * 1024 * 1024
+    ) {
+      toast.error(`ไฟล์ ${file.name} ไม่รองรับ หรือขนาดใหญ่เกิน 5MB`);
+      return;
+    }
+
+    // ตรวจสอบว่ารูปซ้ำกับรูปใหม่ที่เลือกไว้แล้วหรือไม่
+    const isDuplicate = newImages.some(
+      (img) =>
+        img.file.name === file.name &&
+        img.file.size === file.size &&
+        img.file.lastModified === file.lastModified,
+    );
+
+    if (isDuplicate) {
+      toast.error(`รูป ${file.name} ถูกเพิ่มไปแล้ว`);
+      return;
+    }
+
+    validFiles.push({
+      file,
+      preview: URL.createObjectURL(file),
     });
+  });
 
-    setNewImages((prev) => [...prev, ...validFiles].slice(0, 5));
-  };
+  // จำนวนรูปทั้งหมดหลังจากเพิ่มรูปใหม่
+  const totalImages = existingImages.length + newImages.length;
+  const remainingSlots = 5 - totalImages;
 
-  const handleRemoveExistingImage = (id: number, index: number) => {
-    setRemovedImageIds((prev) => {
-      if (prev.includes(id)) return prev;
-      return [...prev, id];
-    });
+  // ถ้าไม่มีพื้นที่เหลือ
+  if (remainingSlots <= 0) {
+    toast.error("สามารถเพิ่มรูปสินค้าได้สูงสุด 5 รูป");
+    return;
+  }
 
-    setExistingImages((prev) => prev.filter((_, i) => i !== index));
-  };
+  // ถ้าเลือกเกินจำนวนที่เหลือ
+  if (validFiles.length > remainingSlots) {
+    toast.error(
+      `สามารถเพิ่มรูปได้อีก ${remainingSlots} รูปเท่านั้น (สูงสุด 5 รูป)`,
+    );
+  }
+
+  // เพิ่มเฉพาะรูปที่ยังอยู่ในจำนวนที่กำหนด
+  setNewImages((prev) => [
+    ...prev,
+    ...validFiles.slice(0, remainingSlots),
+  ]);
+};
+  const handleRemoveExistingImage = (id: number) => {
+  setRemovedImageIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  setExistingImages((prev) => prev.filter((img) => img.id !== id));
+};
+
   const handleRemoveNewImage = (index: number) => {
     setNewImages((prev) => prev.filter((_, i) => i !== index));
   };
@@ -266,7 +286,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   ];
 
 
-  const formInitialValues: FormValues = {
+  const formInitialValues: ProductFormValues  = {
     productName: product?.productName || "",
     categoryName: normalizeCategory(product?.category),
     price: product?.price ?? "",
@@ -277,6 +297,15 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     ),
     description: fullProduct?.description || product?.description || "",
   };
+
+  const createRequest = (values: ProductFormValues) => ({
+  productName: values.productName,
+  categoryId: CATEGORY_MAP[values.categoryName],
+  price: Number(values.price),
+  stockQuantity: Number(values.stockQuantity),
+  statusId: STATUS_MAP[values.status],
+  description: values.description,
+});
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -306,49 +335,50 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 }
 
                 if ( displayImages.length === 0) {
-                  toast.error("กรุณาเพิ่มรูปภาพสินค้าอย่างน้อย 1 รูป",{duration:1500});
+                  toast.error("กรุณาเพิ่มรูปภาพสินค้าอย่างน้อย 1 รูป");
                   return;
                 }
 
                 const formData = new FormData();
+                const request = createRequest(values);
 
-                const requestPayload = {
-                  productName: values.productName,
-                  categoryId: CATEGORY_MAP[values.categoryName],
-                  price: Number(values.price),
-                  stockQuantity: Number(values.stockQuantity),
-                  statusId: STATUS_MAP[values.status],
-                  description: values.description,
-                };
+formData.append(
+  "request",
+  new Blob(
+    [
+      JSON.stringify(
+        isEditMode
+          ? {
+              ...request,
+              removeImages: removedImageIds,
+            }
+          : request
+      ),
+    ],
+    { type: "application/json" }
+  )
+);
 
-                formData.append(
-                  "request",
-                  new Blob([JSON.stringify(requestPayload)], {
-                    type: "application/json",
-                  }),
-                );
-
-                newImages.forEach((img) => {
-                  formData.append("files", img.file);
-                });
+newImages.forEach((img) => {
+  formData.append("files", img.file);
+});
 
                 if (isEditMode) {
                   await dispatch(
                     editProduct({ id: product.id, data: formData }),
                   ).unwrap();
-                  toast.success("แก้ไขข้อมูลสินค้าเรียบร้อยแล้ว",{duration:1500});
+                  toast.success("แก้ไขข้อมูลสินค้าเรียบร้อยแล้ว");
+                  dispatch(fetchProducts());
                 } else {
                   await dispatch(addProduct(formData)).unwrap();
-                  toast.success("เพิ่มสินค้าเรียบร้อยแล้ว",{duration:1500});
+                  toast.success("เพิ่มสินค้าเรียบร้อยแล้ว", {duration: 3000});
                 }
-
-                refreshProductList();
                 handleCloseModal();
               } catch {
                 toast.error(
                     (isEditMode
                       ? "เกิดข้อผิดพลาดในการแก้ไขสินค้า"
-                      : "เกิดข้อผิดพลาดในการเพิ่มสินค้า"),{duration:1500}
+                      : "เกิดข้อผิดพลาดในการเพิ่มสินค้า")
                 );
               } finally {
                 setSubmitting(false);
@@ -402,7 +432,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ราคา
+                      ราคาต่อชิ้น
                     </label>
                     <Field
                       type="number"
@@ -419,7 +449,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                   </div>
                   <div>
   <label className="block text-sm font-medium text-gray-700 mb-1">
-    จำนวนสินค้าในคลัง
+  จำนวนคงเหลือ
   </label>
   <Field
     type="number"
@@ -492,24 +522,13 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                         src={displayImages[0]}
                         alt="Main Product"
                         className="w-full h-full object-contain rounded-lg"
-                        onError={() => {
-                          if (
-                            existingImages[0] &&
-                            !brokenImageIds.includes(existingImages[0].id)
-                          ) {
-                            setBrokenImageIds((prev) => [
-                              ...prev,
-                              existingImages[0].id,
-                            ]);
-                          }
-                        }}
                       />
                       <button
                         type="button"
                         className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 w-7 h-7 flex items-center justify-center text-xs shadow-md hover:bg-red-600 transition-colors"
                         onClick={() => {
                           if (existingImages.length > 0) {
-                            handleRemoveExistingImage(existingImages[0].id, 0);
+                            handleRemoveExistingImage(existingImages[0].id);
                           } else {
                             handleRemoveNewImage(0);
                           }
@@ -522,46 +541,29 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
                   {/* แสดงลิสต์รายการ Thumbnails */}
                   <div className="flex flex-wrap gap-4 justify-center mt-2">
-                    {/* 1. วนแสดงรูปเก่าที่มาจากฐานข้อมูล */}
-                    {existingImages
-                      .slice(
-                        displayImages[0] === existingImages[0]?.url ? 1 : 0,
-                      )
-                      .map((img, index) => {
-                        const actualIndex =
-                          displayImages[0] === existingImages[0]?.url
-                            ? index + 1
-                            : index;
-                        return (
-                          <div
-                            key={`existing-${img.id}`}
-                            className="relative w-24 h-24 border border-gray-200 rounded-lg p-1 bg-white shadow-sm"
+                    
+                  {existingImages.slice(1).map((img) => {
+                      return (
+                        <div
+                          key={`existing-${img.id}`}
+                          className="relative w-24 h-24 border border-gray-200 rounded-lg p-1 bg-white shadow-sm"
+                        >
+                          <img
+                            src={img.url}
+                            alt="Thumbnail Existing"
+                            className="w-full h-full object-contain rounded-md"
+                          />
+                          <button
+                            type="button"
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-[10px] shadow-md hover:bg-red-600 transition-colors"
+                            onClick={() => handleRemoveExistingImage(img.id)}
                           >
-                            <img
-                              src={img.url}
-                              alt="Thumbnail Existing"
-                              className="w-full h-full object-contain rounded-md"
-                              onError={() => {
-                                if (!brokenImageIds.includes(img.id)) {
-                                  setBrokenImageIds((prev) => [
-                                    ...prev,
-                                    img.id,
-                                  ]);
-                                }
-                              }}
-                            />
-                            <button
-                              type="button"
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-[10px] shadow-md hover:bg-red-600 transition-colors"
-                              onClick={() =>
-                                handleRemoveExistingImage(img.id, actualIndex)
-                              }
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        );
-                      })}
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                    
 
                     {/* 2. วนแสดงรูปภาพใหม่ที่เพิ่งอัปโหลดเพิ่มเข้ามา */}
                     {newImages.map((img, index) => {
@@ -590,7 +592,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                   {/* พื้นที่อัปโหลดรูปภาพ (Drag & Drop Zone) */}
                   <div
                     className="w-full border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors mt-2"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={handleUploadClick}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
                       e.preventDefault();
@@ -600,7 +602,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                     <input
                       type="file"
                       multiple
-                      accept="image/png, image/jpeg, image/jpg"
+                      accept="image/png, image/jpg"
                       className="hidden"
                       ref={fileInputRef}
                       onChange={(e) => handleFileChange(e.target.files)}

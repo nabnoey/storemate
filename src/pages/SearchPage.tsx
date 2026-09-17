@@ -106,10 +106,10 @@ const SearchPage = () => {
         ค้นหาสินค้า
       </h1>
 
-      <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 items-start">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 items-start ">
         
         <div className="w-full lg:w-[280px] shrink-0 flex flex-col gap-4">
-          <div className="flex items-center w-full h-[44px] bg-white border border-gray-300 rounded-lg px-3 focus-within:border-gray-400">
+          <div className="relative z-20 flex items-center w-full h-[44px] bg-white border border-gray-300 rounded-lg px-3 focus-within:border-gray-400">
             <button onClick={() => navigate(-1)} className="mr-2 text-black md:hidden shrink-0">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -136,7 +136,7 @@ const SearchPage = () => {
             </button>
           </div>
 
-          <div className={`${openFilter ? "block" : "hidden"} lg:block w-full bg-white rounded-lg border border-gray-200 p-5`} data-test="all-filter">
+          <div className={`${openFilter ? "block" : "hidden"} lg:block w-full bg-white rounded-t-none rounded-lg border border-gray-200 p-5 -mt-6 shadow-md`} data-test="all-filter">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold flex items-center gap-2 text-black">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -162,9 +162,52 @@ const SearchPage = () => {
 
             <p className="text-[15px] text-black font-semibold">ช่วงราคา (฿)</p>
             <div className="flex items-center gap-2 mt-3 text-black">
-              <input data-test="input-min-price" min="0" type="number" placeholder="฿" value={minPriceInput} onChange={(e) => setMinPriceInput(e.target.value)} className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm" />
+              <input
+  data-test="input-min-price"
+  min="0"
+  type="number"
+  placeholder="฿"
+  value={minPriceInput}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    if (Number(value) >= 0 || value === "") {
+      setMinPriceInput(value);
+    }
+  }}
+  onKeyDown={(e) => {
+    if (e.key === "-" || e.key === "e") {
+      e.preventDefault();
+    }
+  }}
+  className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm"
+/>
+
+<span className="text-gray-500">—</span>
+
+<input
+  data-test="input-max-price"
+  min="0"
+  type="number"
+  placeholder="฿"
+  value={maxPriceInput}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    if (Number(value) >= 0 || value === "") {
+      setMaxPriceInput(value);
+    }
+  }}
+  onKeyDown={(e) => {
+    if (e.key === "-" || e.key === "e") {
+      e.preventDefault();
+    }
+  }}
+  className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm"
+/>
+              {/* <input data-test="input-min-price" min="0" type="number" placeholder="฿" value={minPriceInput} onChange={(e) => setMinPriceInput(e.target.value)} className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm" />
               <span className="text-gray-500">—</span>
-              <input data-test="input-max-price" min="0" type="number" placeholder="฿" value={maxPriceInput} onChange={(e) => setMaxPriceInput(e.target.value)} className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm" />
+              <input data-test="input-max-price" min="0" type="number" placeholder="฿" value={maxPriceInput} onChange={(e) => setMaxPriceInput(e.target.value)} className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm" /> */}
             </div>
             
             <div className="mt-5">

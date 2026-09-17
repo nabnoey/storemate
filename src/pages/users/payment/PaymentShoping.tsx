@@ -14,23 +14,33 @@ import type {
   SavedCard,
   PaymentMethod,
 } from "../../../types/payment";
-
-import { PaymentService } from "../../../services/payment.service";
+import {
+  createPaymentIntentThunk,
+  paymentNowThunk,
+  reOrderPaymentThunk,
+} from "../../../redux/payment/paymentReducer";
 import { fetchAddressDefault } from "../../../redux/address/addressReducer";
 import {
   fetchCartThunk,
   setSelectedItems,
 } from "../../../redux/carts/CartReducer";
 
+import { fetchOrderDetails } from "../../../redux/orders/orderReducer";
+// โหลด stripe ครั้วเดียว แล้วสงเข้า Element
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const PaymentContent = () => {
+  // ใช้ส่ง Action
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  // เป็นตัวรับข้อมูลจากหน้าก่อนมา
   const location = useLocation();
+
   const stripe = useStripe();
 
+  // state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
+  // เก๋บ card ที่ผู้ใช้เลือก
   const [selectedCardId, setSelectedCardId] = useState<string>("");
 
   const newlyAddedCard = location.state?.newlyAddedCard;
@@ -40,11 +50,21 @@ const PaymentContent = () => {
     (state: RootState) => state.carts.selectedItems,
   );
 
+  // เช็คว่าปุ่ม สั่งซื้อสินค้า ไหม
   const isBuyNow = location.state?.isBuyNow || false;
+  // เช็คว่ามาจาก สั่งซื้ออีกครั้งหรือป่าว
+  const isReOrder = location.state?.isReOrder === true;
+  // ใช้ดึง order เดิมถ้ามาจาก สั่งซื้ออีกครั้ง
+  const orderDetail = useSelector(
+    (state: RootState) => state.orders.orderDetail,
+  );
 
+  // เลือกว่าจะใช้รายการสินค้าที่ไหน
   const selectedItems = isBuyNow
     ? location.state?.items || []
-    : cartSelectedItems;
+    : isReOrder
+      ? orderDetail?.orderItems || []
+      : cartSelectedItems;
 
   const defaultAddress = useSelector(
     (state: RootState) =>
@@ -52,11 +72,21 @@ const PaymentContent = () => {
   );
 
   useEffect(() => {
+    const orderNo = location.state?.orderNo;
+
+    if (orderNo && !isBuyNow) {
+      dispatch(fetchOrderDetails(orderNo));
+    }
+  }, [dispatch, location.state, isBuyNow]);
+
+  // ที่อยู่
+  useEffect(() => {
     dispatch(fetchAddressDefault());
 
+    // newlyAddedCard มาจาก หน้า AddCreditCard.tsx
     if (newlyAddedCard) {
       const cardName = newlyAddedCard.billing_details?.name || "Card";
-
+      // เป็นการอัปเดต state
       setCurrentCard({
         id: newlyAddedCard.id,
         brand: newlyAddedCard.card?.brand ?? "unknown",
@@ -71,6 +101,9 @@ const PaymentContent = () => {
       state: {
         cartItems: selectedItems,
         isBuyNow: isBuyNow,
+        // เพิ่มมาจาก reOrder
+        orderNo: location.state?.orderNo,
+        isReOrder,
       },
     });
   };
@@ -84,29 +117,46 @@ const PaymentContent = () => {
 
   const validateOrder = () => {
     if (!selectedItems || selectedItems.length === 0) {
-      toast.error("ไม่พบสินค้าในคำสั่งซื้อ", { duration: 2000 });
+      toast.error("ไม่พบสินค้าในคำสั่งซื้อ");
       navigate("/shopping-cart");
       return false;
     }
 
+    // ไม่มีที่อยู่ผู้รับในหน้านี้
     if (!defaultAddress) {
-      toast.error("กรุณาเลือกที่อยู่ในการรับสินค้า", { duration: 2000 });
+      toast.error("กรุณาเลือกที่อยู่ในการรับสินค้า");
       return false;
     }
 
     if (!paymentMethod) {
-      toast.error("กรุณาเลือกช่องทางการชำระเงิน", { duration: 2000 });
+      toast.error("กรุณาเลือกช่องทางการชำระเงิน");
       return false;
     }
 
+    // เพิ่มบัตรเครดิตมาแล้วแต่ไม่กดเลือกบัตรเครดิต
     if (paymentMethod === "CARD" && !selectedCardId) {
-      toast.error("กรุณาเลือกบัตรเครดิต", { duration: 2000 });
+      toast.error("กรุณาเลือกบัตรเครดิต");
       return false;
     }
     return true;
   };
 
+  // เป็นเหมือนตัวตัดสินใจว่าจะใช้ api ในการจัดการคำสั่งซื้อหรือชำระเงิน
   const executePaymentApi = async (checkoutType: PaymentMethod) => {
+    // ซื้ออีกครั้ง จะช้เลขออเดอร์เดิม แล้วเรียก api/v1/reOrder
+    if (isReOrder) {
+      return await dispatch(
+        // ทั้งก้อนนี้เรียกว่า object ข้างใน คือ properties : value
+        reOrderPaymentThunk({
+          // ก้อน 3 ตัวหลังคือเปิดกระเป๋า (location) → หยิบช่อง state → หยิบข้อมูล orderNo
+          // location เป็น Object ที่ได้จาก useLocation() ของ React Router
+          // state เป็น Property ที่เก็บข้อมูลที่ส่งมาจาก navigate() และ orderNo เป็น Property
+          orderNo: location.state.orderNo,
+          checkoutType,
+        }),
+      ).unwrap();
+    }
+
     if (isBuyNow) {
       const buyNowItem = selectedItems[0];
       const payload: PaymentNowPayload = {
@@ -115,7 +165,7 @@ const PaymentContent = () => {
         checkoutType,
         ...(checkoutType === "CARD" && { cardId: selectedCardId }),
       };
-      return await PaymentService.paymentNow(payload);
+      return await dispatch(paymentNowThunk(payload)).unwrap();
     }
 
     // กรณีไม่ได้กด Buy Now (ตะกร้าสินค้า)
@@ -125,18 +175,40 @@ const PaymentContent = () => {
       checkoutType,
       ...(checkoutType === "CARD" && { cardId: selectedCardId }),
     };
-    return await PaymentService.createPaymentIntent(payload);
+    return await dispatch(createPaymentIntentThunk(payload)).unwrap();
   };
 
+  const handleConfirmOrder = async () => {
+    if (!validateOrder()) return;
+
+    let loadingToastId: string | undefined;
+
+    try {
+      const currentCheckoutType = paymentMethod as PaymentMethod;
+
+      const response = await executePaymentApi(currentCheckoutType);
+      await handlePaymentSuccess(
+        currentCheckoutType,
+        response.clientSecret,
+        response,
+      );
+    } catch (error: any) {
+      handlePaymentError(error);
+    } finally {
+      if (loadingToastId) toast.dismiss(loadingToastId);
+    }
+  };
+
+  // ชำระเงินสำเร็จ
   const handlePaymentSuccess = async (
     checkoutType: PaymentMethod,
     clientSecret: string,
+    response: any,
   ) => {
+    // เลือก เครดิต แล้วกดปุ่ม ยืนยันการชำระ
     if (checkoutType === "CARD") {
       if (!stripe) {
-        toast.error("ขออภัย ไม่สามารถติดต่อผู้ให้บริการชำระเงินได้ในขณะนี้", {
-          duration: 2000,
-        });
+        toast.error("ขออภัย ไม่สามารถติดต่อผู้ให้บริการชำระเงินได้ในขณะนี้");
         return;
       }
 
@@ -145,9 +217,7 @@ const PaymentContent = () => {
       });
 
       if (confirmResult.error) {
-        toast.error("ข้อมูลบัตรไม่ถูกต้องหรือยอดเงินไม่เพียงพอ", {
-          duration: 2000,
-        });
+        toast.error("ข้อมูลบัตรไม่ถูกต้องหรือยอดเงินไม่เพียงพอ");
         return;
       }
 
@@ -157,9 +227,7 @@ const PaymentContent = () => {
           dispatch(setSelectedItems([]));
         }
 
-        toast.success("คำสั่งซื้อสำเร็จ", {
-          duration: 2000,
-        });
+        toast.success("คำสั่งซื้อสำเร็จ");
 
         setTimeout(() => {
           navigate("/orders", {
@@ -176,17 +244,33 @@ const PaymentContent = () => {
       return;
     }
 
+    // เลือก พร้อมเพย์ แล้วกดปุ่มยืนยันการชำระเงิน -> หน้า QR  โดย BE จะเป็นคนสร้าง QR เอง
     if (checkoutType === "PROMPTPAY") {
+      await dispatch(fetchCartThunk());
+      dispatch(setSelectedItems([]));
+
+      localStorage.setItem("payment_expiry_timestamp", response.paymentExpired);
+      localStorage.setItem("payment_client_secret", clientSecret);
+      localStorage.setItem("payment_total_price", String(subtotal));
+      localStorage.setItem("orderNo", response.orderNo);
+
       navigate("/payment-qr", {
-        state: { clientSecret, totalPrice: subtotal },
+        state: {
+          clientSecret,
+          totalPrice: subtotal,
+          orderNo: response.orderNo,
+          paymentExpired: response.paymentExpired,
+        },
       });
+
       return;
     }
 
+    // ปลายทาง ไม่ต้องผ่าน stripe คือ กดยืนยัน แล้วสร้างออเดอร์ได้เลย
     if (checkoutType === "DESTINATION") {
-      toast.success("คำสั่งซื้อสำเร็จ", {
-        duration: 2000,
-      });
+      await dispatch(fetchCartThunk());
+      dispatch(setSelectedItems([]));
+      toast.success("คำสั่งซื้อสำเร็จ");
 
       setTimeout(() => {
         navigate("/orders", {
@@ -200,64 +284,47 @@ const PaymentContent = () => {
   };
 
   const handlePaymentError = (error: any) => {
+    // สินค้าหมดสต็อก
     const isOutOfStock =
       error?.response?.status === 400 &&
       error?.response?.data?.message === "OUT_OF_STOCK";
 
     if (isOutOfStock) {
-      toast.error("สินค้าในรถเข็นหมดหรือมีไม่เพียงพอ", { duration: 2000 });
+      toast.error("สินค้าในรถเข็นหมดหรือมีไม่เพียงพอ");
       navigate("/shopping-cart");
       return;
     }
 
-    toast.error("เกิดข้อผิดพลาดในการสร้างคำสั่งซื้อ", { duration: 2000 });
+    toast.error("เกิดข้อผิดพลาดในการสร้างคำสั่งซื้อ");
   };
 
-  const handleConfirmOrder = async () => {
-    if (!validateOrder()) return;
-
-    let loadingToastId: string | undefined;
-
-    try {
-      loadingToastId = toast.loading("กำลังดำเนินการ...");
-      const currentCheckoutType = paymentMethod as PaymentMethod;
-
-      const response = await executePaymentApi(currentCheckoutType);
-
-      // if (!isBuyNow) dispatch(fetchCartThunk());
-
-      await handlePaymentSuccess(currentCheckoutType, response.clientSecret);
-    } catch (error: any) {
-      handlePaymentError(error);
-    } finally {
-      if (loadingToastId) toast.dismiss(loadingToastId);
-    }
-  };
   return (
-    <div className="min-h-screen bg-white md:bg-white lg:bg-white pb-4 md:pb-0 font-anuphan flex flex-col items-center">
+    <div className="min-h-screen bg-white md:bg-white lg:bg-white pb-4 md:pb-0 pt-5 font-anuphan flex flex-col items-center">
       {/* --- DESKTOP & TABLET BREADCRUMB --- */}
-      <div className="w-full max-w-[1136px] px-4 md:px-8 hidden md:block">
-        <nav className="flex items-start mt-16 mb-4 py-1 font-anuphan text-[14px] font-normal leading-[24px] text-black break-words">
-          <Link to="/" className="cursor-pointer hover:text-blue-500">
+      <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 lg:px-5 pt-5 md:pt-6">
+        <nav className="hidden md:hidden lg:flex flex-wrap items-center text-md text-black mb-4 md:mb-8 font-medium">
+          <Link
+            data-test="click-home"
+            to="/"
+            className="transition-colors cursor-pointer"
+          >
             หน้าหลัก
           </Link>
           <Icon
             icon="material-symbols:chevron-right-rounded"
-            className="w-5 h-5 mx-1"
+            className="w-5 h-5 mx-1 text-black"
           />
           <Link
             to="/shopping-cart"
-            className="cursor-pointer hover:text-blue-500"
+            className="transition-colors cursor-pointer"
           >
             รถเข็น
           </Link>
           <Icon
             icon="material-symbols:chevron-right-rounded"
-            className="w-5 h-5 mx-1"
+            className="w-5 h-5 mx-1 text-black"
           />
-          <span className="transition-colors font-semibold">
-            สรุปคำสั่งซื้อ
-          </span>
+          <span className="text-black">สรุปคำสั่งซื้อ</span>
         </nav>
       </div>
 
@@ -294,7 +361,9 @@ const PaymentContent = () => {
                     <strong className="text-black font-normal">
                       {defaultAddress.receiverName}
                     </strong>
-                    {`${defaultAddress.streetAddress} ${defaultAddress.subdistrict} ${defaultAddress.district} ${defaultAddress.province} ${defaultAddress.zipcode}`}
+                    <span data-test="address">
+                      {`${defaultAddress.streetAddress} ต.${defaultAddress.subdistrict} อ.${defaultAddress.district} จ.${defaultAddress.province} ${defaultAddress.zipcode}`}
+                    </span>
                   </span>
                 ) : (
                   <span className="text-red-500">ยังไม่มีข้อมูลที่อยู่</span>
@@ -331,7 +400,10 @@ const PaymentContent = () => {
                   alt=""
                   className="w-30 h-30 object-contain rounded-md"
                 />
-                <div className="flex-1 font-anuphan text-[20px] font-semibold text-black leading-[32px] break-words line-clamp-1">
+                <div
+                  data-test="product-name"
+                  className="flex-1 font-anuphan text-[20px] font-semibold text-black leading-[32px] break-words line-clamp-1"
+                >
                   {item.productName}
                 </div>
                 <div className="w-24 text-left font-anuphan text-[16px] font-normal text-black leading-[24px] break-words">
@@ -349,7 +421,10 @@ const PaymentContent = () => {
 
           <hr className="border-t border-[#D1D5DB] mb-6" />
           <div className="flex flex-col lg:flex-row items-start gap-[60px]">
-            <div className="space-y-4 w-full lg:w-auto">
+            <div
+              data-test="payment-method"
+              className="space-y-4 w-full lg:w-auto"
+            >
               <h2 className="font-anuphan text-[20px] font-semibold text-black leading-[32px] break-words">
                 เลือกช่องทางการชำระเงิน
               </h2>

@@ -1,32 +1,30 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { Icon } from "@iconify/react";
-import toast, { Toaster } from "react-hot-toast";
-import { PaymentService } from "../../../services/payment.service";
+import toast from "react-hot-toast";
 import type { OrderStatus, RefundRequest } from "../../../types/orders";
 import type { PaymentMethod } from "../../../types/payment";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../../../redux/store";
+
+import { sendRefundThunk } from "../../../redux/payment/paymentReducer";
 
 const reasonOptions = [
   { value: "change_payment_method", label: "เปลี่ยนวิธีการชำระเงิน" },
-  { value: "return_refund", label: "คืนสินค้า/คืนเงิน" },
+  { value: "no_longer_want", label: "ไม่ต้องการสินค้านี้แล้ว" },
   {
     value: "change_shipping_address",
     label: "ต้องการเปลี่ยนที่อยู่ในการจัดส่ง",
   },
-  { value: "edit_order_details", label: "ต้องการแก้ไขรายละเอียดคำสั่งซื้อ" },
-  {
-    value: "complex_payment_process",
-    label: "ขั้นตอนการชำระเงินซับซ้อนเกินไป",
-  },
-  { value: "found_cheaper", label: "เจอสินค้าเดียวกันที่ถูกกว่า" },
-  { value: "no_longer_want", label: "ไม่ต้องการซื้อสินค้านี้แล้ว" },
+  { value: "edit_order_details", label: "สั่งซื้อสินค้าผิด" },
+  { value: "no_longer_want", label: "ไม่ต้องการสินค้านี้แล้ว" },
 ];
 
 const CancelOrderPage = () => {
   const { orderNo } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-
+  const dispatch = useDispatch<AppDispatch>();
   const orderStatus = (location.state?.status as OrderStatus) || "PENDING";
   const checkoutType =
     location.state?.checkoutType ||
@@ -48,12 +46,12 @@ const CancelOrderPage = () => {
 
   const handleSubmit = async () => {
     if (!selectedReason) {
-      toast.error("กรุณาเลือกเหตุผลในการยกเลิกคำสั่งซื้อ", { duration: 1500 });
+      toast.error("กรุณาเลือกเหตุผลในการยกเลิกคำสั่งซื้อ");
       return;
     }
 
     if (!orderNo) {
-      toast.error("ไม่พบข้อมูลคำสั่งซื้อ", { duration: 1500 });
+      toast.error("ไม่พบข้อมูลคำสั่งซื้อ");
 
       return;
     }
@@ -66,20 +64,18 @@ const CancelOrderPage = () => {
 
     setIsSubmitting(true);
     try {
-      await PaymentService.sendRefund(payload);
+      await dispatch(sendRefundThunk(payload)).unwrap();
 
       if (isCancelAction) {
-        toast.success("ส่งคำขอยกเลิกสำเร็จ", { duration: 1500 });
+        toast.success("ส่งคำขอยกเลิกสำเร็จ");
 
         setTimeout(() => {
           navigate("/orders?status=CANCELLED");
         });
       } else if (isRefundAction) {
-        toast.success("ส่งคำขอคืนเงินสำเร็จ อยู่ระหว่างการตรวจสอบ", {
-          duration: 1500,
-        });
+        toast.success("ส่งคำขอคืนเงินสำเร็จ อยู่ระหว่างการตรวจสอบ");
         setTimeout(() => {
-          navigate("/orders?status=REFUNDED");
+          navigate("/orders?status=PROCESSING");
         });
       }
     } catch (error: any) {
@@ -92,9 +88,7 @@ const CancelOrderPage = () => {
       ) {
         toast.error("ไม่พบข้อมูลคำสั่งซื้อ");
       } else if (errorMessage === "Refund exist") {
-        toast.error("คุณได้ส่งคำขอยกเลิก/คืนเงิน สำหรับออเดอร์นี้ไปแล้ว", {
-          duration: 1500,
-        });
+        toast.error("คุณได้ส่งคำขอยกเลิก/คืนเงิน สำหรับออเดอร์นี้ไปแล้ว");
       } else if (errorMessage === "Can't refund this order") {
         toast.error(
           "หลังบ้านยังไม่ได้ปรับสิทธิ์: ออเดอร์ PENDING ไม่ต้องวิ่งเข้าฟังก์ชัน Refund",
@@ -107,15 +101,14 @@ const CancelOrderPage = () => {
     }
   };
   return (
-    <div className="min-h-screen flex flex-col bg-white font-anuphan text-gray-950 pt-4 md:pt-20 pb-4 md:pb-20">
-      <Toaster position="top-center" reverseOrder={false} />
-
+    <div className="min-h-screen flex flex-col bg-white font-anuphan text-gray-950 pt-4 md:pt-5 pb-4 md:pb-20">
       {/* --- DESKTOP & TABLET BREADCRUMB --- */}
-      <div className="max-w-[1200px] mx-auto px-4 w-full hidden md:block">
-        <nav className="flex flex-wrap items-center text-sm md:text-md text-black mb-4 font-medium">
+      <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 lg:px-5 pt-5 md:pt-6">
+        <nav className="hidden md:hidden lg:flex flex-wrap items-center text-md text-black mb-4 md:mb-8 font-medium">
           <Link
+            data-test="click-home"
             to="/"
-            className="transition-colors cursor-pointer hover:text-blue-500"
+            className="transition-colors cursor-pointer"
           >
             หน้าหลัก
           </Link>
@@ -123,21 +116,14 @@ const CancelOrderPage = () => {
             icon="material-symbols:chevron-right-rounded"
             className="w-5 h-5 mx-1 text-black"
           />
-          <Link to="/orders" className="text-black hover:text-blue-500">
+          <Link to="/orders" className="transition-colors cursor-pointer">
             การซื้อของฉัน
           </Link>
           <Icon
             icon="material-symbols:chevron-right-rounded"
             className="w-5 h-5 mx-1 text-black"
           />
-          <Link to="/orders" className="transition-colors hover:text-blue-500">
-            สถานะคำสั่งซื้อ
-          </Link>
-          <Icon
-            icon="material-symbols:chevron-right-rounded"
-            className="w-5 h-5 mx-1 text-black"
-          />
-          <span className="transition-colors">ขอคืนเงิน/ยกเลิกสินค้า</span>
+          <span className="text-black">ขอคืนเงิน/ยกเลิกสินค้า</span>
         </nav>
       </div>
 
@@ -152,12 +138,12 @@ const CancelOrderPage = () => {
             >
               <Icon
                 icon="lucide:arrow-left"
-                className="w-6 h-6 mt-1 cursor-pointer text-black hover:text-[#4285F4] transition-colors"
+                className="w-6 h-6 mt-1 cursor-pointer text-black transition-colors"
               />
             </button>
             <div>
               <h1 className="text-[18px] md:text-[20px] font-bold text-[#0F172A]">
-                ยกเลิกคำสั่งซื้อ
+                ยกเลิกคำสั่งซื้อ / ขอคืนเงิน
               </h1>
               <p className="text-[13px] md:text-sm text-[#64748B]">
                 ระบุรายละเอียดเพื่อแจ้งความประสงค์
@@ -176,17 +162,20 @@ const CancelOrderPage = () => {
                   เงื่อนไขการทำรายการ
                 </h3>
                 <p className="text-[13px] md:text-[14px] leading-relaxed text-[#B45309]">
-                  การยกเลิกสินค้าสามารถทำได้เฉพาะรายการที่สถานะเป็น
-                  "รอดำเนินการ" เท่านั้น <br className="hidden sm:block" />
-                  สำหรับการคืนสินค้าสาารถทำได้ภายใน 7 วันหลังจากได้รับสินค้า
+                  การยกเลิกคำสั่งซื้อและการขอคืนเงินสามารถดำเนินการได้เฉพาะคำสั่งซื้อที่มีสถานะ
+                  “ที่ต้องชำระ” และ “ที่ต้องจัดส่ง” เท่านั้น{" "}
+                  <br className="hidden sm:block" />
+                  เมื่อคำสั่งซื้อเปลี่ยนเป็นสถานะอื่น
+                  จะไม่สามารถยกเลิกหรือขอคืนเงินผ่านระบบได้
                 </p>
               </div>
             </div>
 
             {/* Reason Dropdown */}
             <div className="flex flex-col gap-2">
-              <label className="text-[14px] md:text-[16px] text-[#94A3B8] font-medium md:pt-4">
-                เหตุผลในการขอทำรายการ
+              <label className="flex items-center gap-1 text-[14px] md:text-[16px] text-[#94A3B8] font-medium md:pt-4">
+                <span>เหตุผลในการขอทำรายการ</span>
+                <span className="text-red-500">*</span>
               </label>
               <div className="relative w-full md:w-1/2">
                 <div
