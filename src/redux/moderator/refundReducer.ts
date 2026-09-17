@@ -82,7 +82,9 @@ export const approveRefund = createAsyncThunk(
       return id;
     } catch (err: any) {
       return rejectWithValue(
-        err.response?.data?.message || err.message || "ไม่สามารถอนุมัติได้",
+        err.response?.data?.message ||
+          err.message ||
+          "ขออภัยเกิดข้อผิดพลาดในระบบ",
       );
     }
   },
@@ -95,9 +97,7 @@ export const rejectRefund = createAsyncThunk(
       await ModeratorService.rejectRefund(id);
       return id;
     } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.message || err.message || "ไม่สามารถปฏิเสธได้",
-      );
+      return rejectWithValue("ขออภัยเกิดข้อผิดพลาดในระบบ");
     }
   },
 );

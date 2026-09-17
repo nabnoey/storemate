@@ -10,11 +10,13 @@ import { fetchOrders } from "../../../redux/orders/orderReducer";
 import type { OrderStatus, Order } from "../../../types/orders";
 import { statusConfig } from "../../../types/orders";
 import { toast } from "react-hot-toast";
-import { retryPaymentThunk } from "../../../redux/payment/paymentReducer";
+import {
+  retryPaymentThunk,
+  resetPaymentStatus,
+} from "../../../redux/payment/paymentReducer";
 import { useReview } from "../../../hooks/useReview";
 import ReviewManager from "../../../components/user/review/ReviewManager";
 import Skeleton from "../../../components/loading/Skeletons";
-
 
 const Order = () => {
   const navigate = useNavigate();
@@ -88,7 +90,13 @@ const Order = () => {
     e.stopPropagation();
 
     try {
+      // ล้าง session เก่า
       clearPaymentSession();
+
+      // สำคัญ: reset status จาก payment ครั้งก่อน
+      dispatch(resetPaymentStatus());
+
+      // สร้าง Payment ใหม่
       const response = await dispatch(
         retryPaymentThunk({
           orderNo: order.orderNo,
@@ -96,8 +104,11 @@ const Order = () => {
       ).unwrap();
 
       localStorage.setItem("orderNo", order.orderNo);
+
       localStorage.setItem("payment_client_secret", response.clientSecret);
+
       localStorage.setItem("payment_total_price", String(orderTotal));
+
       localStorage.setItem("payment_expiry_timestamp", response.paymentExpired);
 
       navigate("/payment-qr", {

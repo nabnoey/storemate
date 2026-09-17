@@ -302,7 +302,7 @@ const NotificationManagementPage: React.FC = () => {
   );
 
   return (
-    <div className="flex h-screen bg-[#F8F9FA] font-anuphan">
+    <div className="flex h-screen bg-white font-anuphan">
       <main className="flex-1 flex flex-col overflow-hidden">
         <HeaderAdmin
           title="จัดการแจ้งเตือน"
@@ -534,32 +534,35 @@ const NotificationManagementPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between pt-4">
-                <select
-                  data-test="select-recipients"
-                  name="recipients"
-                  className="bg-gray-100 border-none text-gray-600 text-xs rounded-xl px-4 py-2.5 outline-none cursor-pointer"
-                  value={formData.recipients}
-                  onChange={handleChange}
-                >
-                  <option value="ส่งทั้งหมด ">ส่งทั้งหมด </option>
-                  <option value="พนักงาน">พนักงาน</option>
-                  <option value="ผู้ใช้งาน">ผู้ใช้งาน</option>
-                </select>
+              <div className="pt-1">
+                <div className="mb-2">
+                  <select
+                    data-test="select-recipients"
+                    name="recipients"
+                    className="bg-gray-100 border-none text-gray-600 text-xs rounded-md px-3 py-2 outline-none cursor-pointer"
+                    value={formData.recipients}
+                    onChange={handleChange}
+                  >
+                    <option value="ทั้งหมด">ส่งทั้งหมด</option>
+                    <option value="พนักงาน">พนักงาน</option>
+                    <option value="ผู้ใช้งาน">ผู้ใช้งาน</option>
+                  </select>
+                </div>
 
-                <div className="flex space-x-3">
+                <div className="flex justify-end items-center gap-2">
                   <button
                     data-test="btn-submit-create"
                     type="submit"
-                    className="cursor-pointer bg-blue-600 text-white px-8 py-2.5 rounded-full text-xs font-medium transition-al"
+                    className="cursor-pointer bg-blue-600 text-white px-6 py-2 rounded-full text-xs font-medium transition-all"
                   >
                     ส่งการแจ้งเตือน
                   </button>
+
                   <button
                     data-test="btn-cancel-create"
                     type="button"
                     onClick={handleCancel}
-                    className="cursor-pointer bg-white border border-black text-black px-8 py-2.5 rounded-full text-xs font-medium transition-all"
+                    className="cursor-pointer bg-white border border-black text-black px-6 py-2 rounded-full text-xs font-medium transition-all"
                   >
                     ยกเลิก
                   </button>
