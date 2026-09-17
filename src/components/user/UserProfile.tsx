@@ -5,6 +5,8 @@ import { logout } from "../../redux/auth/authReducer";
 import type { AppDispatch, RootState } from "../../redux/store";
 import { TokenService } from "../../services/token.service";
 import { toast } from "react-hot-toast";
+//เพิ่มเพื่อลอง
+import { fetchOrders } from "../../redux/orders/orderReducer";
 
 interface UserProfileProps {
   variant?: "desktop" | "mobile";
@@ -21,6 +23,8 @@ const UserProfile: React.FC<Readonly<UserProfileProps>> = ({
   const location = useLocation();
 
   const roles = user?.roles ?? [];
+  //เพิ่มเพื่อลอง
+  const { orders, loading } = useSelector((state: RootState) => state.orders);
 
   const isAdmin = roles.includes("ADMIN");
   const isModerator = roles.includes("MODERATOR");
@@ -226,6 +230,13 @@ const UserProfile: React.FC<Readonly<UserProfileProps>> = ({
             <button
               data-test="btn-orders"
               type="button"
+              onMouseEnter={() => {
+                //เพิ่มเพื่อลอง
+                // 🛑 ต้องใส่ if ตรงนี้ครับ! เพื่อห้ามไม่ให้มันยิงซ้ำถ้ากำลังโหลด หรือมีข้อมูลแล้ว
+                if (orders.length === 0 && !loading) {
+                  dispatch(fetchOrders("ALL"));
+                }
+              }}
               onClick={() => handleNavigation("/orders?status=ALL")}
               className={`flex w-full cursor-pointer items-center justify-start gap-[10px] p-[10px] transition-colors rounded-md text-left hover:bg-gray-100 ${
                 isActive("/orders?status=ALL") ? "bg-gray-100" : ""

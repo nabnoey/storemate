@@ -27,7 +27,7 @@ const ModeratorRoute = ({ children }: Props) => {
       if (decoded.exp * 1000 < Date.now()) {
         isTokenInvalid = true;
       }
-    } catch (error) {
+    } catch {
       isTokenInvalid = true;
     }
   }

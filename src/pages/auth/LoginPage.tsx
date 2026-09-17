@@ -9,6 +9,7 @@ import { toast } from "react-hot-toast";
 import logo from "../../assets/logo.png";
 import auth from "../../assets/Auth.png";
 import { jwtDecode } from "jwt-decode";
+import Cookies from "js-cookie";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
@@ -21,12 +22,10 @@ function LoginPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const savedEmail = localStorage.getItem("remember_email");
-    const savedPassword = localStorage.getItem("remember_password");
+    const savedEmail = Cookies.get("remember_email");
 
-    if (savedEmail && savedPassword) {
+    if (savedEmail) {
       setEmail(savedEmail);
-      setPassword(savedPassword);
       setRememberMe(true);
     }
   }, []);
@@ -51,13 +50,11 @@ function LoginPage() {
       ).unwrap();
 
       if (rememberMe) {
-        // เก็บ Email และ Password ลง localStorage (เพื่อใช้กรอกฟอร์มครั้งหน้า)
-        localStorage.setItem("remember_email", email);
-        localStorage.setItem("remember_password", password);
+        Cookies.set("remember_email", email, {
+          expires: 30,
+        });
       } else {
-        // ถ้าไม่ได้ติ๊ก ให้ลบข้อมูลที่เคยจำไว้ออก
-        localStorage.removeItem("remember_email");
-        localStorage.removeItem("remember_password");
+        Cookies.remove("remember_email");
       }
 
       toast.dismiss();
