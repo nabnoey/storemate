@@ -86,6 +86,7 @@ export const STATUS_LABELS: Record<string, string> = {
   PROCESSING: "กำลังเตรียมสินค้า",
   RECEIVED: "จัดส่งแล้ว",
   COMPLETED: "สำเร็จแล้ว",
+  CANCELLED: "ยกเลิก",
 };
 
 export const STATUS_STYLES: Record<string, string> = {
@@ -93,4 +94,5 @@ export const STATUS_STYLES: Record<string, string> = {
   PROCESSING: "bg-blue-100 text-blue-700",
   RECEIVED: "bg-purple-100 text-purple-700",
   COMPLETED: "bg-green-100 text-green-700",
+  CANCELLED: "bg-[#F3F4F6] text-[#718096]",
 };

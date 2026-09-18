@@ -131,7 +131,11 @@ const router = createBrowserRouter([
       },
       {
         path: "address-profile",
-        element: <AddressProfile />,
+         element: (
+          <ProtectedRout>
+            <AddressProfile />
+          </ProtectedRout>
+        ),
       },
       {
         path: "about-us",
