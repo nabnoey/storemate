@@ -28,7 +28,11 @@ function SidebarAdmin() {
   const user = useSelector((state: RootState) => state.auth.user);
   const isOwner = Array.isArray(user?.roles)
     ? user.roles.some(
-        (role: any) => role === "ADMIN" || role?.roleName === "ADMIN",
+        (role: any) =>
+          role === "ADMIN" ||
+          role?.roleName === "ADMIN" ||
+          role === "OWNER" ||
+          role?.roleName === "OWNER",
       )
     : false;
 

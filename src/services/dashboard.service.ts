@@ -1,10 +1,10 @@
 import api from "./api";
 
-const OWNER_API = "owner";
+const OWNER_API = import.meta.env.VITE_OWNER_API || "owner";
 
 export const DashboardService = {
   getOwnerDashboard: async () => {
-    const response = await api.get(`/${OWNER_API}/dashboard`);
+    const response = await api.get(`${OWNER_API}/dashboard`);
     return response.data;
   },
   
@@ -18,7 +18,7 @@ export const DashboardService = {
   importSalesData: async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await api.post(`/${OWNER_API}/import`, formData);
+    const response = await api.post(`${OWNER_API}/import`, formData);
     return response.data;
   },
 };
