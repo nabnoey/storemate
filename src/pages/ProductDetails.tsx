@@ -117,7 +117,6 @@ const ProductDetailPage: React.FC = () => {
       navigate("/login");
       return;
     }
-    if (!productDetail) return;
 
     if (isUnavailable) {
       toast.error("สินค้านี้ไม่พร้อมจำหน่าย");
@@ -132,9 +131,7 @@ const ProductDetailPage: React.FC = () => {
           `ไม่สามารถเพิ่มจำนวนสินค้าได้ เนื่องจากคุณเพิ่มสินค้านี้ไว้ในรถเข็นเเล้ว ${quantityInCart} ชิ้น`,
         );
       } else {
-        toast.error(
-          `จำนวนสินค้าในสต็อกไม่เพียงพอ (คงเหลือ ${currentStock} ชิ้น)`,
-        );
+        toast.error(`จำนวนสินค้าในสต็อกไม่เพียงพอ`);
       }
       return;
     }
@@ -179,8 +176,6 @@ const ProductDetailPage: React.FC = () => {
       return;
     }
 
-    if (!productDetail) return;
-
     if (isUnavailable) {
       toast.error("สินค้านี้ไม่พร้อมจำหน่าย");
       return;
@@ -193,6 +188,8 @@ const ProductDetailPage: React.FC = () => {
       return;
     }
 
+    // const totalQuantity = quantityInCart + buyQuantity;
+
     const checkoutData = {
       isBuyNow: true,
       items: [
@@ -200,6 +197,7 @@ const ProductDetailPage: React.FC = () => {
           productId: productDetail.id,
           cartItemId: null,
           quantity: buyQuantity,
+          // quantity: totalQuantity,
           price: productDetail.price,
           totalPrice: productDetail.price * buyQuantity,
 
