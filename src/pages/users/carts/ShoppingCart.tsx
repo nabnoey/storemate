@@ -349,7 +349,7 @@ const selectedCartItems = useMemo(() => {
 
                       <div className="text-blue-500 font-md w-20 md:w-24 text-right md:text-center"
                       data-test="subtotal-product">
-                        ฿{(item.subTotal.toLocaleString())}
+                         ฿{(item.price * item.quantity).toLocaleString()}
                       </div>
 
                       {/* ปุ่มลบสำหรับ Desktop */}
