@@ -25,11 +25,10 @@ export const statusConfig: Record<
   PROCESSING: { label: "ที่ต้องจัดส่ง", color: "text-[#3B82F6]" },
   RECEIVED: { label: "ที่ต้องได้รับ", color: "text-[#1E40AF]" },
   COMPLETED: { label: "คำสั่งซื้อสำเร็จ", color: "text-[#10B981]" },
-  CANCELLED: { label: "ยกเลิกแล้ว", color: "text-red-500" },
-  REFUNDED: { label: "คืนเงินแล้ว", color: "text-purple-500" },
+  CANCELLED: { label: "ยกเลิกคำสั่งซื้อ", color: "text-red-500" },
+  REFUNDED: { label: "คืนเงิน", color: "text-red-500" },
   ALL: { label: "ทั้งหมด", color: "text-black" },
 };
-
 
 //แปลง สถานะของออเดอร์ (status) ให้เป็น ข้อความ
 export const getOrderLabel = (status: OrderStatus): string => {
@@ -80,7 +79,7 @@ export interface OrdersState {
 
 export interface StatusOrderTabsProps {
   activeTab: string;
-   onTabChange: (tabName: OrderStatus) => void;
+  onTabChange: (tabName: OrderStatus) => void;
 }
 
 export interface RefundRequest {

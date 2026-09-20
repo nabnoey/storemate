@@ -214,6 +214,11 @@ const Order = () => {
 
                   const hasReviewed = reviewedItems.length > 0;
                   const hasUnreviewed = unreviewedItems.length > 0;
+                  const canBuyAgain = [
+                    "COMPLETED",
+                    "CANCELLED",
+                    "REFUNDED",
+                  ].includes(order.status);
 
                   return (
                     <OrderCard
@@ -223,17 +228,18 @@ const Order = () => {
                         <>
                           {order.status === "COMPLETED" ? (
                             <div className="mt-3 flex flex-wrap gap-3 sm:justify-end sm:items-center w-full">
-                              <button
-                                type="button"
-                                data-test="btn-retry-orders"
-                                onClick={(e) => {
-                                  handleBuyAgain(e, order);
-                                }}
-                                className="cursor-pointer flex-1 sm:flex-initial sm:w-[170px] h-[44px] rounded-lg bg-[#3B82F6] text-[#FCFCFC] font-medium text-[14px] sm:text-[16px] flex justify-center items-center transition hover:bg-blue-600 cursor-pointer shadow-sm"
-                              >
-                                ซื้ออีกครั้ง
-                              </button>
-
+                              {canBuyAgain && (
+                                <button
+                                  type="button"
+                                  data-test="btn-retry-orders"
+                                  onClick={(e) => {
+                                    handleBuyAgain(e, order);
+                                  }}
+                                  className="cursor-pointer flex-1 sm:flex-initial sm:w-[170px] h-[44px] rounded-lg bg-[#3B82F6] text-[#FCFCFC] font-medium text-[14px] sm:text-[16px] flex justify-center items-center transition hover:bg-blue-600 cursor-pointer shadow-sm"
+                                >
+                                  ซื้ออีกครั้ง
+                                </button>
+                              )}
                               {hasUnreviewed && (
                                 <button
                                   data-test="btn-add-review"
@@ -297,6 +303,18 @@ const Order = () => {
                                 </span>
                                 {order.reason || "ไม่ได้ระบุเหตุผล"}
                               </p>
+                              {canBuyAgain && (
+                                <div className="mt-3 flex flex-wrap gap-3 sm:justify-end sm:items-center w-full">
+                                  <button
+                                    type="button"
+                                    data-test="btn-retry-orders"
+                                    onClick={(e) => handleBuyAgain(e, order)}
+                                    className="cursor-pointer flex-1 sm:flex-initial sm:w-[170px] h-[44px] rounded-lg bg-[#3B82F6] text-white font-medium text-[14px] sm:text-[16px] flex justify-center items-center transition hover:bg-blue-600 shadow-sm"
+                                  >
+                                    ซื้ออีกครั้ง
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           ) : order.status === "PENDING" ||
                             (order.status === "PROCESSING" &&

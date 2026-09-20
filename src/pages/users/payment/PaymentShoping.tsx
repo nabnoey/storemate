@@ -193,7 +193,7 @@ const PaymentContent = () => {
         response,
       );
     } catch (error: any) {
-      handlePaymentError(error);
+      handlePaymentError();
     } finally {
       if (loadingToastId) toast.dismiss(loadingToastId);
     }
@@ -283,19 +283,9 @@ const PaymentContent = () => {
     }
   };
 
-  const handlePaymentError = (error: any) => {
-    // สินค้าหมดสต็อก
-    const isOutOfStock =
-      error?.response?.status === 400 &&
-      error?.response?.data?.message === "OUT_OF_STOCK";
-
-    if (isOutOfStock) {
-      toast.error("สินค้าในรถเข็นหมดหรือมีไม่เพียงพอ");
-      navigate("/shopping-cart");
-      return;
-    }
-
+  const handlePaymentError = () => {
     toast.error("เกิดข้อผิดพลาดในการสร้างคำสั่งซื้อ");
+    navigate("/shopping-cart");
   };
 
   return (
