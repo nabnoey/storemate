@@ -17,7 +17,7 @@ const reasonOptions = [
     label: "ต้องการเปลี่ยนที่อยู่ในการจัดส่ง",
   },
   { value: "edit_order_details", label: "สั่งซื้อสินค้าผิด" },
-  { value: "no_longer_want", label: "ไม่ต้องการสินค้านี้แล้ว" },
+  { value: "duplicate_order", label: "สั่งซื้อซ้ำ" },
 ];
 
 const CancelOrderPage = () => {
