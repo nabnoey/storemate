@@ -109,7 +109,7 @@ function OrderDetail() {
   const [selectedStatus, setSelectedStatus] = useState("");
 
   useEffect(() => {
-    if (orderNo && orderNo) {
+    if (orderNo) {
       dispatch(getOrderByOrderNo(orderNo));
     }
   }, [orderNo, dispatch]);
@@ -118,7 +118,7 @@ function OrderDetail() {
 if (loading && !order) {
   return <OrderDetailSkeleton />;
 }
-if (!loading && !order){
+if (!order){
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="text-center">
@@ -138,7 +138,7 @@ if (!loading && !order){
 }
 
   const handleUpdateStatus = async () => {
-    // if (!order) return;
+    if (!order) return;
 
     // ดึงค่าที่เลือกมาใช้ ถ้ายังไม่เลือกอะไรให้ใช้สถานะเดิมจาก backend
     const currentSelected = selectedStatus || order.status;
@@ -176,7 +176,7 @@ if (!loading && !order){
 
   const currentStepIndex = steps.findIndex((s) => s.status === order.status);
 
-  const items = order.orderItems
+  const items = order.orderItems ?? [];
 
   const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
     DESTINATION: "เก็บเงินปลายทาง (COD)",
