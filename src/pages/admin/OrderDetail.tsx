@@ -25,6 +25,7 @@ import {
 } from "../../types/moderator/ordersMod";
 import { toast } from "react-hot-toast";
 import type { PaymentMethod } from "../../types/payment";
+import OrderDetailSkeleton from "../../components/loading/OrderDetailSkeleton";
 
 function StatusStep({
   icon: Icon,
@@ -103,7 +104,7 @@ function OrderDetail() {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { orderDetail } = useSelector((state: RootState) => state.moderator);
+  const { orderDetail,loading } = useSelector((state: RootState) => state.moderator);
   const order = orderDetail && orderDetail.length > 0 ? orderDetail[0] : null;
   const [selectedStatus, setSelectedStatus] = useState("");
 
@@ -113,24 +114,31 @@ function OrderDetail() {
     }
   }, [orderNo, dispatch]);
 
-  if (!order) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">ไม่พบข้อมูลคำสั่งซื้อ</p>
-          <button
-            onClick={() => navigate("/orders-management")}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
-          >
-            กลับไปที่จัดการคำสั่งซื้อ
-          </button>
-        </div>
+
+if (loading && !order) {
+  return <OrderDetailSkeleton />;
+}
+if (!loading && !order){
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="text-center">
+        <p className="text-gray-600 mb-4">
+          ไม่พบข้อมูลคำสั่งซื้อ
+        </p>
+
+        <button
+          onClick={() => navigate("/orders-management")}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
+        >
+          กลับไปที่จัดการคำสั่งซื้อ
+        </button>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   const handleUpdateStatus = async () => {
-    if (!order) return;
+    // if (!order) return;
 
     // ดึงค่าที่เลือกมาใช้ ถ้ายังไม่เลือกอะไรให้ใช้สถานะเดิมจาก backend
     const currentSelected = selectedStatus || order.status;
@@ -145,11 +153,12 @@ function OrderDetail() {
         changeStatus({ orderNo: order.orderNo, status: currentSelected }),
       ).unwrap();
 
-      toast.success("อัปเดตสถานะคำสั่งซื้อสำเร็จ");
+          // ดึงข้อมูลล่าสุดกลับมา
+    await dispatch(getOrderByOrderNo(order.orderNo)).unwrap();
 
-      setTimeout(() => {
-        navigate("/orders-management");
-      }, 1500);
+    // reset select ให้ตรงกับสถานะใหม่
+    setSelectedStatus("");
+      toast.success("อัปเดตสถานะคำสั่งซื้อสำเร็จ");
     } catch {
       toast.error("ไม่สามารถเปลี่ยนสถานะคำสั่งซื้อได้");
     }
@@ -167,15 +176,7 @@ function OrderDetail() {
 
   const currentStepIndex = steps.findIndex((s) => s.status === order.status);
 
-  const items = order.orderItems || [
-    {
-      id: 1,
-      imageUrl: "https://via.placeholder.com/150",
-      productName: "น้ำมะม่วงหาวมะนาวโห่ สกัดเข้มข้น ไม่มีน้ำตาล",
-      quantity: 1,
-      price: order.total || 35,
-    },
-  ];
+  const items = order.orderItems
 
   const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
     DESTINATION: "เก็บเงินปลายทาง (COD)",
