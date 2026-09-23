@@ -122,9 +122,9 @@ const moderatorSlice = createSlice({
         state.loading = true;
       })
       .addCase(fetchAllOrders.fulfilled, (state, action) => {
-        state.loading = false;
         state.orders = action.payload.content;
         state.totalPages = action.payload?.totalPages;
+        state.loading = false;
       })
 
       .addCase(shippingOrder.fulfilled, (state, action) => {
@@ -132,17 +132,32 @@ const moderatorSlice = createSlice({
           (order) => action.payload.find((o) => o.id === order.id) ?? order,
         );
       })
+            .addCase(getOrderByOrderNo.pending, (state) => {
+       state.loading = true;
+      })
 
       .addCase(getOrderByOrderNo.fulfilled, (state, action) => {
         state.orderDetail = [action.payload];
+        state.loading = false;
       })
+
       .addCase(changeStatus.fulfilled, (state, action) => {
-        state.orders = state.orders.map((order) =>
-          order.orderNo === action.payload.orderNo
-            ? { ...order, ...action.payload }
-            : order,
-        );
-      })
+  const updatedOrder = action.payload;
+
+  // อัปเดตในหน้ารายการ
+  state.orders = state.orders.map((order) =>
+    order.orderNo === updatedOrder.orderNo
+      ? { ...order, ...updatedOrder }
+      : order,
+  );
+
+  // อัปเดตในหน้า Order Detail
+  state.orderDetail = state.orderDetail.map((order) =>
+    order.orderNo === updatedOrder.orderNo
+      ? { ...order, ...updatedOrder }
+      : order,
+  );
+})
 
       .addCase(addProduct.fulfilled, (state, action) => {
         if (Array.isArray(state.products)) {

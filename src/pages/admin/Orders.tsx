@@ -386,7 +386,7 @@ function Orders() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
-                  {loading ? (
+                  {loading && orders.length === 0 ? (
                     <OwnerSkeletons
                       type="mod-table"
                       rows={PAGE_SIZE}

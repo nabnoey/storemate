@@ -14,6 +14,7 @@ import {
 import type { User, UserRole } from "../../types/owner";
 import UserFilterBar from "../../components/admin/UserFilterBar";
 import { Pagination } from "../../components/admin/Pagination";
+import OwnerSkeletons from "../../components/loading/OwnerSkeletons";
 
 // ─── Pagination config ───
 const ITEMS_PER_PAGE = 10;
@@ -28,7 +29,7 @@ const ROLE_LABEL_MAP: Record<UserRole, string> = {
 
 const getRoleLabel = (role: UserRole): string => {
   if (!role) return "-";
-  return ROLE_LABEL_MAP[role] || "-";
+  return ROLE_LABEL_MAP[role] ;
 };
 
 const getRoleBadgeClass = (role: UserRole): string => {
@@ -65,7 +66,7 @@ function UserManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { users, totalPages } = useSelector((state: RootState) => state.owner);
+  const { users, totalPages, loading } = useSelector((state: RootState) => state.owner);
   const pageParam = searchParams.get("page");
   const initialPage = pageParam !== null ? Number(pageParam) + 1 : 1;
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -87,9 +88,6 @@ function UserManagement() {
   const formik = useFormik({
     enableReinitialize: true,
     initialValues: {
-      // role: selectedUser?.role?.replace("ROLE_", "") === "OWNER"
-      //   ? "ADMIN"
-      //   : (selectedUser?.role?.replace("ROLE_", "") || "USER"),
       role: selectedUser?.role?.replace("ROLE_", "") || "USER",
       suspended: selectedUser?.suspended ? "suspended" : "active",
     },
@@ -280,15 +278,15 @@ function UserManagement() {
               </thead>
 
               <tbody className="divide-y divide-gray-100 text-sm">
-                {paginatedUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-gray-400">
-                      ไม่พบข้อมูล
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedUsers.map((user) => {
-                    const status = getStatusBadge(user.suspended);
+              {loading && paginatedUsers.length === 0 ? (
+    <OwnerSkeletons
+      type="mod-table"
+      rows={10}
+      columns={6}
+    />
+  ) : paginatedUsers.length > 0 ? (
+    paginatedUsers.map((user) => {
+      const status = getStatusBadge(user.suspended);
                     return (
                       <tr
                         key={user.id}
@@ -328,7 +326,16 @@ function UserManagement() {
                       </tr>
                     );
                   })
-                )}
+                ): (
+    <tr>
+      <td
+        colSpan={6}
+        className="py-8 text-center text-gray-400"
+      >
+        ไม่พบข้อมูล
+      </td>
+    </tr>
+    )}
               </tbody>
             </table>
           </div>
