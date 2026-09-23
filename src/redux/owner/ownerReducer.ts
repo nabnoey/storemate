@@ -32,8 +32,8 @@ const initialState: OwnerState = {
 export const getUserManagement = createAsyncThunk<
   UserManagementResponse,
   GetUserManagementParams
->("owner/getUserManagement", async ({ page, size, search }) => {
-  return await ownerService.getUserManagement(page, size, search);
+>("owner/getUserManagement", async ({ page, size, search, roleName, suspended }) => {
+  return await ownerService.getUserManagement(page, size, search, roleName, suspended);
 });
 
 export const getStore = createAsyncThunk("owner/getStore", async () => {

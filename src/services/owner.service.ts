@@ -5,9 +5,11 @@ const getUserManagement = async (
   page?: number,
   size?: number,
   search?: string,
+  roleName?: string,
+  suspended?: boolean,
 ) => {
   const res = await api.get(`${import.meta.env.VITE_OWNER_API}/users`, {
-    params: { page, size, search },
+    params: { page, size, search, roleName, suspended },
   });
   return res.data;
 };
