@@ -46,6 +46,8 @@ export interface GetUserManagementParams {
   page: number;
   size: number;
   search?: string;
+  roleName?: string;
+  suspended?: boolean;
 }
 
 /** API response จาก GET /owner/users?page=0&size=5 */

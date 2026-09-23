@@ -1,25 +1,27 @@
 import HeaderAdmin from "../../components/admin/HeaderAdmin";
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useFormik } from "formik";
 import toast from "react-hot-toast";
+
 import type { AppDispatch, RootState } from "../../redux/store";
+
 import {
   getUserManagement,
   updateUserRole,
   suspendUser,
   activeUser,
 } from "../../redux/owner/ownerReducer";
+
 import type { User, UserRole } from "../../types/owner";
+
 import UserFilterBar from "../../components/admin/UserFilterBar";
 import { Pagination } from "../../components/admin/Pagination";
 import OwnerSkeletons from "../../components/loading/OwnerSkeletons";
 
-// ─── Pagination config ───
 const ITEMS_PER_PAGE = 10;
 
-/** แปลง role จาก API เป็นภาษาไทย */
 const ROLE_LABEL_MAP: Record<UserRole, string> = {
   OWNER: "เจ้าของร้าน",
   ADMIN: "เจ้าของร้าน",
@@ -27,20 +29,33 @@ const ROLE_LABEL_MAP: Record<UserRole, string> = {
   USER: "ผู้ใช้งาน",
 };
 
+const normalizeRole = (role: string): UserRole => {
+  return role.replace("ROLE_", "") as UserRole;
+};
+
 const getRoleLabel = (role: UserRole): string => {
   if (!role) return "-";
-  return ROLE_LABEL_MAP[role] ;
+
+  const normalizedRole = normalizeRole(role);
+
+  return ROLE_LABEL_MAP[normalizedRole] ?? "-";
 };
 
 const getRoleBadgeClass = (role: UserRole): string => {
-  if (!role) return "bg-[#F3F4F6] text-[#4B5563]";
-  const norm = role.replace("ROLE_", "");
-  switch (norm) {
+  if (!role) {
+    return "bg-[#F3F4F6] text-[#4B5563]";
+  }
+
+  const normalizedRole = normalizeRole(role);
+
+  switch (normalizedRole) {
     case "OWNER":
     case "ADMIN":
       return "bg-[#F3E8FF] text-[#7E22CE]";
+
     case "MODERATOR":
       return "bg-[#EFF6FF] text-[#1D4ED8]";
+
     default:
       return "bg-[#F3F4F6] text-[#4B5563]";
   }
@@ -87,15 +102,15 @@ function UserManagement() {
 
   const formik = useFormik({
     enableReinitialize: true,
-    initialValues: {
-      role: selectedUser?.role?.replace("ROLE_", "") || "USER",
-      suspended: selectedUser?.suspended ? "suspended" : "active",
-    },
+  initialValues: {
+  role: selectedUser ? normalizeRole(selectedUser.role) : "USER",
+  suspended: selectedUser?.suspended ? "suspended" : "active",
+},
     onSubmit: async (values) => {
       if (!selectedUser) return;
 
       try {
-        const currentRole = selectedUser.role.replace("ROLE_", "") || "USER";
+        const currentRole = normalizeRole(selectedUser.role);
         const currentSuspended = selectedUser.suspended
           ? "suspended"
           : "active";
@@ -108,7 +123,7 @@ function UserManagement() {
           return;
         }
 
-        const promises: Promise<any>[] = [];
+        const promises: Promise<unknown>[] = [];
 
         // 1. Update Role
         if (roleChanged) {
@@ -150,36 +165,35 @@ function UserManagement() {
     },
   });
 
-  const setSearchParamsRef = useRef(setSearchParams);
-
   useEffect(() => {
-    setSearchParamsRef.current = setSearchParams;
-  }, [setSearchParams]);
+  const params: Record<string, string> = {
+    page: String(currentPage - 1),
+    size: String(ITEMS_PER_PAGE),
+  };
 
-  // ฟังก์ชันเขียนค่าลง URL
-  const updateSearchParams = useCallback(() => {
-    const params: Record<string, string> = {
-      page: String(currentPage - 1),
-      size: String(ITEMS_PER_PAGE),
-    };
+  if (activeKeyword.trim()) {
+    params.search = activeKeyword.trim();
+  }
 
-    setSearchParamsRef.current(params, { replace: true });
-  }, []);
+  setSearchParams(params, { replace: true });
+}, [currentPage, activeKeyword, setSearchParams]);
 
-  useEffect(() => {
-    updateSearchParams();
-  }, [currentPage, activeKeyword, updateSearchParams]);
-
-  // เรียกดึงข้อมูลจาก API เมื่อ activeKeyword หรือหน้า (currentPage) มีการเปลี่ยนแปลง
-  useEffect(() => {
-    dispatch(
-      getUserManagement({
-        page: currentPage - 1,
-        size: ITEMS_PER_PAGE,
-        search: activeKeyword.trim(),
-      }),
-    );
-  }, [dispatch, currentPage, activeKeyword]);
+useEffect(() => {
+  dispatch(
+    getUserManagement({
+      page: currentPage - 1,
+      size: ITEMS_PER_PAGE,
+      search: activeKeyword.trim(),
+      roleName: roleFilter || undefined,
+      suspended:
+        statusFilter === "active"
+          ? false
+          : statusFilter === "suspended"
+            ? true
+            : undefined,
+    }),
+  );
+}, [dispatch, currentPage, activeKeyword, roleFilter, statusFilter]);
 
   // ฟังก์ชันกดค้นหาจากปุ่ม หรือ Enter
   const handleSearchSubmit = () => {
@@ -187,48 +201,7 @@ function UserManagement() {
     setActiveKeyword(searchTerm);
   };
 
-  const displayedUsers = useMemo(() => {
-    let result: User[] = [...users];
-
-    if (roleFilter) {
-      const matchRoles: string[] = [roleFilter, `ROLE_${roleFilter}`];
-      if (roleFilter === "ADMIN" || roleFilter === "OWNER") {
-        matchRoles.push("ADMIN");
-      }
-      result = result.filter((u) => matchRoles.includes(u.role));
-    }
-
-    if (statusFilter === "active") {
-      result = result.filter((u) => !u.suspended);
-    } else if (statusFilter === "suspended") {
-      result = result.filter((u) => u.suspended);
-    }
-
-    const ROLE_PRIORITY_LOCAL: Record<string, number> = {
-      OWNER: 0,
-      ADMIN: 0,
-      MODERATOR: 1,
-      USER: 2,
-    };
-
-    result.sort((a, b) => {
-      const normA = (a.role || "").toUpperCase().replace("ROLE_", "").trim();
-      const normB = (b.role || "").toUpperCase().replace("ROLE_", "").trim();
-      const priorityA = ROLE_PRIORITY_LOCAL[normA] ?? 99;
-      const priorityB = ROLE_PRIORITY_LOCAL[normB] ?? 99;
-      return priorityA - priorityB;
-    });
-
-    return result;
-  }, [users, roleFilter, statusFilter]);
-
-  // ใช้จำนวนหน้าทั้งหมดจาก Redux (ที่ได้จาก Backend)
-  const totalDisplayPages = totalPages || 0;
-
-  const paginatedUsers = displayedUsers;
-  const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
-  };
+  const displayedUsers = users;
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -278,14 +251,14 @@ function UserManagement() {
               </thead>
 
               <tbody className="divide-y divide-gray-100 text-sm">
-              {loading && paginatedUsers.length === 0 ? (
-    <OwnerSkeletons
-      type="mod-table"
-      rows={10}
-      columns={6}
-    />
-  ) : paginatedUsers.length > 0 ? (
-    paginatedUsers.map((user) => {
+ {loading && displayedUsers.length === 0 ? (
+  <OwnerSkeletons
+    type="mod-table"
+    rows={10}
+    columns={6}
+  />
+) : displayedUsers.length > 0 ? (
+  displayedUsers.map((user) => {
       const status = getStatusBadge(user.suspended);
                     return (
                       <tr
@@ -340,11 +313,11 @@ function UserManagement() {
             </table>
           </div>
 
-          <Pagination
-            currentPage={currentPage} // บวก 1 เพื่อให้ Pagination โชว์เริ่มที่หน้า 1
-            totalPages={totalDisplayPages}
-            onPageChange={(newPage) => handlePageChange(newPage)} // ลบ 1 คืนตอนส่งค่ากลับให้ State
-          />
+         <Pagination
+  currentPage={currentPage}
+  totalPages={totalPages ?? 0}
+  onPageChange={setCurrentPage}
+/>
         </div>
       </div>
 
