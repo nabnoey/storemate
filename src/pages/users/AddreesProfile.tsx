@@ -570,6 +570,7 @@ const handleSetDefault = async (addressId: number) => {
                     id="streetAddress"
                     name="streetAddress"
                     value={formData.streetAddress}
+                    maxLength={200}
                     onChange={handleInputChange}
                     placeholder="บ้านเลขที่ / ถนน / ซอย"
                     className="w-full h-11 border border-gray-300 rounded-lg px-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all bg-white"
