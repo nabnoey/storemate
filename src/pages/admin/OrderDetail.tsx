@@ -137,41 +137,55 @@ if (!order){
   );
 }
 
-  const handleUpdateStatus = async () => {
-    if (!order) return;
+const handleUpdateStatus = async () => {
+  if (!order) return;
 
-    // ดึงค่าที่เลือกมาใช้ ถ้ายังไม่เลือกอะไรให้ใช้สถานะเดิมจาก backend
-    const currentSelected = selectedStatus || order.status;
-
-    if (currentSelected === order.status) {
-      toast.error("กรุณาเลือกสถานะใหม่ที่ต่างจากสถานะปัจจุบัน");
-      return;
-    }
-
-    try {
-      await dispatch(
-        changeStatus({ orderNo: order.orderNo, status: currentSelected }),
-      ).unwrap();
-
-          // ดึงข้อมูลล่าสุดกลับมา
-    await dispatch(getOrderByOrderNo(order.orderNo)).unwrap();
-
-    // reset select ให้ตรงกับสถานะใหม่
-    setSelectedStatus("");
-      toast.success("อัปเดตสถานะคำสั่งซื้อสำเร็จ");
-    } catch {
-      toast.error("ไม่สามารถเปลี่ยนสถานะคำสั่งซื้อได้");
-    }
-  };
+  const currentSelected = selectedStatus || order.status;
 
   const currentIndex = STATUS_ORDER.indexOf(order.status);
+  const selectedIndex = STATUS_ORDER.indexOf(currentSelected);
+
+  console.log("current:", order.status, currentIndex);
+  console.log("selected:", currentSelected, selectedIndex);
+
+  // ห้ามสถานะเดิม
+  if (currentSelected === order.status) {
+    toast.error("ไม่สามารถเปลี่ยนสถานะคำสั่งซื้อได้");
+    return;
+  }
+
+  // ห้ามย้อนกลับไปสถานะก่อนหน้า
+  if (selectedIndex < currentIndex) {
+    toast.error("ไม่สามารถเปลี่ยนสถานะคำสั่งซื้อได้");
+    setSelectedStatus("");
+    return;
+  }
+
+  try {
+    await dispatch(
+      changeStatus({
+        orderNo: order.orderNo,
+        status: currentSelected,
+      }),
+    ).unwrap();
+
+    await dispatch(getOrderByOrderNo(order.orderNo)).unwrap();
+
+    setSelectedStatus("");
+    toast.success("อัปเดตสถานะคำสั่งซื้อสำเร็จ");
+  } catch {
+    toast.error("ไม่สามารถเปลี่ยนสถานะคำสั่งซื้อได้");
+  }
+};
+
+  // const currentIndex = STATUS_ORDER.indexOf(order.status);
   const recipient = order.orderRecipient || {};
 
   const steps = [
     { icon: <FiClock />, label: "รอดำเนินการ", status: "PENDING" },
-    { icon: <FiClipboard />, label: "กำลังเตรียมสินค้า", status: "PROCESSING" },
-    { icon: <FiTruck />, label: "จัดส่งแล้ว", status: "RECEIVED" },
-    { icon: <FiCheckCircle />, label: "สำเร็จแล้ว", status: "COMPLETED" },
+    { icon: <FiClipboard />, label: "กำลังเตรียมสินค้า", status: "Prepare" },
+    { icon: <FiTruck />, label: "จัดส่งแล้ว", status: "Shipping" },
+    { icon: <FiCheckCircle />, label: "สำเร็จแล้ว", status: "Succe" },
   ];
 
   const currentStepIndex = steps.findIndex((s) => s.status === order.status);
@@ -261,16 +275,11 @@ if (!order){
                           onChange={(e) => setSelectedStatus(e.target.value)}
                           className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 pr-8"
                         >
-                          {Object.entries(STATUS_LABELS)
-                            .filter(
-                              ([key]) =>
-                                STATUS_ORDER.indexOf(key) >= currentIndex,
-                            )
-                            .map(([key, label]) => (
-                              <option key={key} value={key}>
-                                {label}
-                              </option>
-                            ))}
+                       {Object.entries(STATUS_LABELS).map(([key, label]) => (
+  <option key={key} value={key}>
+    {label}
+  </option>
+))}
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                           <svg
