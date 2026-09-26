@@ -439,7 +439,7 @@ newImages.forEach((img) => {
                       min={0}
                       name="price"
                       placeholder="ราคา"
-                      onWheel={(e) => e.currentTarget.blur()}
+                      onWheel={(e: React.WheelEvent<HTMLInputElement>) => e.currentTarget.blur()}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-gray-700 placeholder-gray-400"
                     />
                     <ErrorMessage
@@ -457,7 +457,7 @@ newImages.forEach((img) => {
     min={0}
     name="stockQuantity"
     placeholder="จำนวนสินค้า"
-    onWheel={(e) => e.currentTarget.blur()}
+    onWheel={(e: React.WheelEvent<HTMLInputElement>) => e.currentTarget.blur()}
     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-gray-700 placeholder-gray-400"
     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value;
