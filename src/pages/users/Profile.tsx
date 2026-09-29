@@ -482,10 +482,7 @@ const ProfilePage = () => {
                         data-test="profile-email"
                         className="text-[14px] sm:text-[16px] text-black truncate"
                       >
-                        {tempData.email.replace(
-                          /(.)([^@]*)(@.*)/,
-                          "$1******$3",
-                        )}
+                        {tempData.email}
                       </div>
                       <button
                         data-test="btn-change-email"
@@ -512,9 +509,7 @@ const ProfilePage = () => {
                         data-test="profile-phone"
                         className="text-[14px] sm:text-[16px] text-black truncate"
                       >
-                        {tempData.phone
-                          ? tempData.phone.replace(/^(.*)(.{2})$/, "********$2")
-                          : "-"}
+                        {tempData.phone}
                       </div>
                       <button
                         data-test="btn-change-phone"
