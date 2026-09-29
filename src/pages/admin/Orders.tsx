@@ -114,9 +114,36 @@ function Orders() {
   ]);
 
   const reactToPrintFn = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: "ใบปะหน้าพัสดุ",
-  });
+  contentRef: printRef,
+  documentTitle: "ใบปะหน้าพัสดุ",
+
+  onAfterPrint: async () => {
+    // ดึงข้อมูลใหม่ เพื่อเอาค่า is_printed ล่าสุด
+    await dispatch(
+      fetchAllOrders({
+        page: currentPage - 1,
+        size: PAGE_SIZE,
+        keyword: submittedSearchTerm || undefined,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        period: periodValue,
+      }),
+    );
+
+    // เอาติ๊กที่เลือกออก
+    setSelectedOrders([]);
+
+    // ออกจากโหมดปริ้น
+    setIsPrintMode(false);
+
+    // เคลียร์ข้อมูลที่ใช้ปริ้น
+    setPrintData([]);
+  },
+});
+  // const reactToPrintFn = useReactToPrint({
+  //   contentRef: printRef,
+  //   documentTitle: "ใบปะหน้าพัสดุ",
+  // });
 
   useEffect(() => {
     if (printData.length > 0) {
@@ -337,7 +364,9 @@ function Orders() {
                       key={tab}
                       type="button"
                       onClick={() => {
-                        setTimeFilter(tab);
+                        // setTimeFilter(tab);
+                        setTimeFilter((prev) => (prev === tab ? "" : tab));
+
                         setCurrentPage(1); // เปลี่ยน Tab ก็ควรกลับไปหน้าแรก
                       }}
                       className={`px-4 py-2 border-r last:border-r-0 transition-colors cursor-pointer ${
