@@ -18,6 +18,7 @@ import {
   markAsReadNotify,
 } from "../../redux/notification/notificationReducer";
 
+
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
@@ -30,6 +31,8 @@ const Navbar: React.FC = () => {
   );
 
   const [inputValue, setInputValue] = useState("");
+    const [openSearch, setOpenSearch] = useState(false);
+  const [openMenu, setOpenMenu] = useState(false);
 
   const notifications = useSelector(
     (state: RootState) => state.notification.items,
@@ -41,7 +44,26 @@ const Navbar: React.FC = () => {
   const unreadCount = useSelector(
     (state: RootState) => state.notification.counts.ALL,
   );
+
   const previewNotifications = notifications.slice(0, 3);
+
+
+  useEffect(() => {
+    const handleCloseMenu = () => {
+      if (openMenu) {
+        setOpenMenu(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleCloseMenu, { passive: true });
+    window.addEventListener("touchmove", handleCloseMenu, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleCloseMenu);
+      window.removeEventListener("touchmove", handleCloseMenu);
+    };
+  }, [openMenu]);
+
 
   useEffect(() => {
     if (isAuthentication) {
@@ -65,6 +87,9 @@ const Navbar: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  
+  
+
   const handleBellClick = () => {
     if (window.innerWidth >= 1024) {
       setOpenNotifyDropdown(!openNotifyDropdown);
@@ -82,8 +107,9 @@ const Navbar: React.FC = () => {
     navigate(`/search?keyword=${inputValue}`);
   };
 
-  const [openSearch, setOpenSearch] = useState(false);
-  const [openMenu, setOpenMenu] = useState(false);
+  // const [openSearch, setOpenSearch] = useState(false);
+  // const [openMenu, setOpenMenu] = useState(false);
+
 
   const cartItems = useSelector((state: RootState) => state.carts.items);
 
@@ -148,6 +174,7 @@ const Navbar: React.FC = () => {
             </Link>
           </li>
           <li>
+            
             <Link
               data-test="list-about"
               className={`cursor-pointer transition-colors duration-200 ${
@@ -214,7 +241,16 @@ const Navbar: React.FC = () => {
                     handleSubmitSearch();
                   }
                 }}
-                className="absolute right-8 -top-2 input input-bordered bg-white w-35 sm:w-40 md:w-48 h-10 text-[#74768f] z-50"
+                className="absolute right-8 -top-2
+  input input-bordered bg-white
+  w-[90px]
+  min-[360px]:w-[110px]
+  min-[400px]:w-[130px]
+  sm:w-40
+  md:w-48
+  h-10
+  text-[#74768f]
+  z-50"
                 autoFocus
               />
             </>
@@ -261,12 +297,6 @@ const Navbar: React.FC = () => {
                       {unreadCount}
                     </span>
                   )}
-
-                  {/* {newCount > 0 && (
-                    <span className="absolute top-0 left-0 bg-blue-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
-                      {newCount}
-                    </span>
-                  )} */}
                 </button>
 
                 {openNotifyDropdown && (
@@ -368,6 +398,13 @@ const Navbar: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* {openMenu && (
+  <div
+    className="fixed inset-0 z-40"
+    onClick={() => setOpenMenu(false)}
+  />
+)} */}
 
       {/* MOBILE MENU DROPDOWN */}
       {openMenu && (

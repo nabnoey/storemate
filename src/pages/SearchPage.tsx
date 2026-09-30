@@ -109,8 +109,8 @@ const SearchPage = () => {
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 items-start ">
         
         <div className="w-full lg:w-[280px] shrink-0 flex flex-col gap-4">
-          <div className="relative z-20 flex items-center w-full h-[44px] bg-white border border-gray-300 rounded-lg px-3 focus-within:border-gray-400">
-            <button onClick={() => navigate(-1)} className="mr-2 text-black md:hidden shrink-0">
+          <div className="relative z-20 flex items-center w-full h-[44px] bg-white border border-gray-300 rounded-lg px-3 focus-within:border-gray-400  max-[400px]:mt-4">
+            <button onClick={() => navigate("/")} className="mr-2 text-black md:hidden shrink-0">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
@@ -205,9 +205,6 @@ const SearchPage = () => {
   }}
   className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm"
 />
-              {/* <input data-test="input-min-price" min="0" type="number" placeholder="฿" value={minPriceInput} onChange={(e) => setMinPriceInput(e.target.value)} className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm" />
-              <span className="text-gray-500">—</span>
-              <input data-test="input-max-price" min="0" type="number" placeholder="฿" value={maxPriceInput} onChange={(e) => setMaxPriceInput(e.target.value)} className="w-full border border-gray-300 rounded-md p-1.5 text-center text-sm" /> */}
             </div>
             
             <div className="mt-5">

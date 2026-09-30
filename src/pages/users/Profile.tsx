@@ -775,7 +775,7 @@ const ProfilePage = () => {
         </EditModal>
       </div>
     </div>
-  );
+  )
 };
 
 export default ProfilePage;
