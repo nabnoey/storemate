@@ -509,9 +509,7 @@ const ProfilePage = () => {
                         data-test="profile-phone"
                         className="text-[14px] sm:text-[16px] text-black truncate"
                       >
-                        {tempData.phone
-                          ? tempData.phone.replace(/^(.*)(.{2})$/, "********$2")
-                          : "-"}
+                        {tempData.phone}
                       </div>
                       <button
                         data-test="btn-change-phone"
@@ -777,7 +775,7 @@ const ProfilePage = () => {
         </EditModal>
       </div>
     </div>
-  )
+  );
 };
 
 export default ProfilePage;
