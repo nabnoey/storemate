@@ -89,6 +89,17 @@ export const STATUS_LABELS: Record<string, string> = {
   CANCELLED: "ยกเลิก",
 };
 
+
+// export const STATUS_LABELS_ORDER_DETAILS: Record<string, string> = {
+//   PENDING: "รอดำเนินการ",
+//   PREPARE: "ที่ต้องจัดส่ง",
+//   SHIPPING: "จัดส่งแล้ว",
+//   SUCCESS: "สำเร็จแล้ว",
+// };
+
+
+
+
 export const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
   PROCESSING: "bg-blue-100 text-blue-700",

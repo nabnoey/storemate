@@ -183,9 +183,9 @@ const handleUpdateStatus = async () => {
 
   const steps = [
     { icon: <FiClock />, label: "รอดำเนินการ", status: "PENDING" },
-    { icon: <FiClipboard />, label: "กำลังเตรียมสินค้า", status: "Prepare" },
-    { icon: <FiTruck />, label: "จัดส่งแล้ว", status: "Shipping" },
-    { icon: <FiCheckCircle />, label: "สำเร็จแล้ว", status: "Succe" },
+    { icon: <FiClipboard />, label: "กำลังเตรียมสินค้า", status: "PROCESSING" },
+    { icon: <FiTruck />, label: "จัดส่งแล้ว", status: "RECEIVED" },
+    { icon: <FiCheckCircle />, label: "สำเร็จแล้ว", status: "COMPLETED" },
   ];
 
   const currentStepIndex = steps.findIndex((s) => s.status === order.status);
