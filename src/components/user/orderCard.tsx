@@ -31,35 +31,88 @@ const OrderCard = ({ order, actionButtons }: OrderCardProps) => {
     });
   };
 
+  const formatOrderNo = (orderNo: string) => {
+  const match = orderNo.match(/^ORD-(\d{4})(\d{2})(\d{2})/);
+
+  if (!match) return orderNo;
+
+  const [, year, month, day] = match;
+
+  return `ORD-${year}-${month}-${day}`;
+};
+
   return (
     <div
       data-test={`order-card-${order.id}`}
       className="w-full cursor-pointer hover:shadow-md transition-shadow rounded-xl p-4 bg-white border border-gray-200/80 shadow-sm"
     >
-      <div className="grid grid-cols-3 sm:flex sm:justify-between gap-2 pb-4 border-b border-gray-100">
-        <div>
-          <p className="text-[11px] sm:text-sm text-gray-500 mb-1">
+      <div className="grid grid-cols-3 gap-2 pb-4 border-b border-gray-200">
+        <div className="min-w-0">
+          <p className="text-[10px] min-[400px]:text-[11px] sm:text-sm text-gray-500 mb-1 ">
             เลขที่คำสั่งซื้อ
           </p>
           <p
-            className="font-semibold text-black text-[13px] sm:text-[16px] break-all leading-tight"
+  className="
+    font-semibold
+    text-black
+    text-[11px]
+    sm:text-[16px]
+    leading-tight
+  "
+  data-test={`card-order-${order.orderNo}`}
+>
+  {/* จอมือถือ */}
+  <span className="sm:hidden whitespace-nowrap">
+    {formatOrderNo(order.orderNo)}
+  </span>
+
+  {/* จอ Desktop */}
+  <span className="hidden sm:inline">
+    {order.orderNo}
+  </span>
+</p>
+          {/* <p
+ className="
+    font-semibold
+    text-black
+    text-[13px]
+    sm:text-[16px]
+    leading-tight
+
+    max-[400px]:max-w-[120px]
+    max-[400px]:overflow-hidden
+    max-[400px]:whitespace-nowrap
+
+    sm:max-w-none
+    sm:whitespace-normal
+  "
             data-test={`card-order-${order.orderNo}`}
           >
             {`${order.orderNo}`}
-          </p>
+          </p> */}
         </div>
-        <div className="px-1">
-          <p className="text-[11px] sm:text-sm text-gray-500 mb-1">
+        <div className="min-w-0 px-1">
+          <p className="text-[10px] min-[400px]:text-[11px] sm:text-sm text-gray-500 mb-1">
             วันที่สั่งซื้อ
           </p>
-          <p className="font-medium text-black text-[13px] sm:text-[16px] leading-tight">
+          <p className=" font-medium
+        text-black
+        text-[11px]
+        min-[400px]:text-[12px]
+        sm:text-[16px]
+        leading-tight">
             {formatOrderDate(order.createdAt)}
           </p>
         </div>
-        <div className="text-right sm:text-left">
-          <p className="text-[11px] sm:text-sm text-gray-500 mb-1">สถานะ</p>
+        <div className="min-w-0 pl-1">
+          <p className="text-[10px] min-[400px]:text-[11px] sm:text-sm text-gray-500 mb-1">สถานะ</p>
           <p
-            className={`font-semibold ${color} text-[13px] sm:text-[16px] leading-tight`}
+            className={` font-semibold
+        ${color}
+        text-[11px]
+        min-[400px]:text-[12px]
+        sm:text-[16px]
+        leading-tight`}
           >
             {label}
           </p>
@@ -67,16 +120,6 @@ const OrderCard = ({ order, actionButtons }: OrderCardProps) => {
       </div>
 
       <div className="flex flex-col gap-2 py-3 border-b border-gray-100 w-full">
-        <div className="flex justify-between items-center translate-y-25 translate-x-31">
-          <Link
-            to={`/orders/${order.orderNo}`}
-            className="text-right text-[#3B82F6] text-sm font-bold inline-flex items-center gap-1"
-            data-test="btn-order-details"
-          >
-            ดูรายละเอียดสินค้า
-            <FiChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
         {visibleItems.map((item: OrderItem, idx: number) => (
           <div key={item.id || idx} className="flex gap-3 py-1">
             <img
@@ -103,6 +146,27 @@ const OrderCard = ({ order, actionButtons }: OrderCardProps) => {
               >
                 จำนวน x {item.quantity}
               </div>
+
+             <Link
+    to={`/orders/${order.orderNo}`}
+    className="
+      mt-0.5
+      text-[#3B82F6]
+      text-[12px]
+      sm:text-[14px]
+      font-semibold
+      inline-flex
+      items-center
+      gap-0.5
+      w-fit
+      whitespace-nowrap
+    "
+    data-test="btn-order-details"
+  >
+    ดูรายละเอียดสินค้า
+    <FiChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
+  </Link>
+              
             </div>
             <div
               className="text-right text-[#3B82F6] font-bold text-[15px] sm:text-lg flex-shrink-0 self-center pl-2"
