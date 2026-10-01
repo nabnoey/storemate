@@ -396,13 +396,25 @@ const PaymentContent = () => {
                 >
                   {item.productName}
                 </div>
-                <div className="w-24 text-left font-anuphan text-[16px] font-normal text-black leading-[24px] break-words">
+
+                <div
+                  data-test="product-price"
+                  className="w-24 text-left font-anuphan text-[16px] font-normal text-black leading-[24px] break-words"
+                >
                   ฿ {item.price.toLocaleString()}
                 </div>
-                <div className="w-24 text-center font-anuphan text-[16px] font-normal text-black leading-[24px] break-words">
+
+                <div
+                  data-test="product-quantity"
+                  className="w-24 text-center font-anuphan text-[16px] font-normal text-black leading-[24px] break-words"
+                >
                   X {item.quantity}
                 </div>
-                <div className="w-24 text-right font-anuphan text-[16px] font-normal text-[#3B82F6] leading-[24px] break-words">
+
+                <div
+                  data-test="product-total-price"
+                  className="w-24 text-right font-anuphan text-[16px] font-normal text-[#3B82F6] leading-[24px] break-words"
+                >
                   ฿ {(item.price * item.quantity).toLocaleString()}
                 </div>
               </div>
