@@ -19,7 +19,7 @@ import type { RootState, AppDispatch } from "../../../redux/store";
 import { statusConfig, getOrderLabel } from "../../../utils/order";
 import type { PaymentMethod } from "../../../types/payment";
 
-  const formatOrderNo = (orderNo: string) => {
+const formatOrderNo = (orderNo: string) => {
   const match = orderNo.match(/^ORD-(\d{4})(\d{2})(\d{2})/);
 
   if (!match) return orderNo;
@@ -110,13 +110,21 @@ function OrderItemRow({
           className="w-18 h-18 bg-gray-100 rounded-md object-cover"
         />
         <div>
-          <p className="font-bold text-gray-800 text-sm md:text-[16px]">{name}</p>
-          <p className="text-xs text-gray-500 mt-1 md:text-[16px]">ราคาต่อหน่วย ฿ {price}</p>
-          <p className="text-xs text-gray-500 mt-1 md:text-[16px]">จำนวน x {quantity}</p>
+          <p className="font-bold text-gray-800 text-sm md:text-[16px]">
+            {name}
+          </p>
+          <p className="text-xs text-gray-500 mt-1 md:text-[16px]">
+            ราคาต่อหน่วย ฿ {price}
+          </p>
+          <p className="text-xs text-gray-500 mt-1 md:text-[16px]">
+            จำนวน x {quantity}
+          </p>
         </div>
       </div>
       <div className="text-right">
-        <p className="font-bold text-blue-500 md:text-[20px]">฿ {price.toLocaleString()}</p>
+        <p className="font-bold text-blue-500 md:text-[20px]">
+          ฿ {price.toLocaleString()}
+        </p>
       </div>
     </div>
   );
@@ -215,71 +223,70 @@ function OrderDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 flex flex-col gap-6 ">
             {order.status === "CANCELLED" || order.status === "REFUNDED" ? (
-  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
-    {order.status === "CANCELLED" && (
-      <>
-        <h2 className="text-red-500 font-bold text-lg mb-2">
-          คำขอยกเลิกได้รับการยอมรับแล้ว
-        </h2>
-        <p className="text-sm text-gray-500">
-          คืนคำสั่งซื้อเมื่อ : {orderDate}
-        </p>
-      </>
-    )}
+              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
+                {order.status === "CANCELLED" && (
+                  <>
+                    <h2 className="text-red-500 font-bold text-lg mb-2">
+                      คำขอยกเลิกได้รับการยอมรับแล้ว
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      คืนคำสั่งซื้อเมื่อ : {orderDate}
+                    </p>
+                  </>
+                )}
 
-    {order.status === "REFUNDED" && (
-      <>
-        <h2 className="text-[#EF4444] font-bold text-lg mb-2">
-          การคืนเงินสำเร็จ
-        </h2>
-        <p className="text-sm text-gray-600 mt-2">
-          เราได้ทำการคืนเงินจำนวน ฿ {order.total.toLocaleString()}{" "}
-          ให้คุณแล้ว โอนเงินคืนภายใน 7-14 วันทำการ
-          ในกรณีที่ชำระผ่านบัตรเครดิต/เดบิต อาจใช้เวลา 15-45
-          วันทำการ หากคุณยังไม่ได้รับเงินคืนภายในระยะเวลาดังกล่าว
-          กรุณาติดต่อธนาคารเจ้าของบัตร
-        </p>
-      </>
-    )}
-  </div>
-) : (
-  <div className="bg-white px-4 md:px-8 py-8 rounded-xl border border-gray-200 shadow-sm">
-    <div className="relative">
-      {/* เส้นสีเทาทั้งเส้น */}
-      <div
-        className="absolute h-[2px] bg-gray-300 z-0"
-        style={{
-          top: "20px",
-          left: "12.5%",
-          right: "12.5%",
-        }}
-      />
+                {order.status === "REFUNDED" && (
+                  <>
+                    <h2 className="text-[#EF4444] font-bold text-lg mb-2">
+                      การคืนเงินสำเร็จ
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-2">
+                      เราได้ทำการคืนเงินจำนวน ฿ {order.total.toLocaleString()}{" "}
+                      แล้ว คุณจะ ได้รับเงินคืนภายใน 7-14 วันทำการ
+                      ในกรณีที่ชำระด้วยบัตรเดบิต อาจใช้เวลา 15-45 วันทำการ
+                      หากคุณยังไม่ได้รับเงินคืนภายในระยะเวลาดังกล่าว
+                      กรุณาติดต่อธนาคารหรือสถาบันการเงินของคุณ.
+                    </p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white px-4 md:px-8 py-8 rounded-xl border border-gray-200 shadow-sm">
+                <div className="relative">
+                  {/* เส้นสีเทาทั้งเส้น */}
+                  <div
+                    className="absolute h-[2px] bg-gray-300 z-0"
+                    style={{
+                      top: "20px",
+                      left: "12.5%",
+                      right: "12.5%",
+                    }}
+                  />
 
-      {/* เส้นสีน้ำเงินตามสถานะ */}
-      <div
-        className="absolute h-[2px] bg-[#3B82F6] z-[1] transition-all duration-500"
-        style={{
-          top: "20px",
-          left: "12.5%",
-          width: `${(currentStepIndex / (steps.length - 1)) * 75}%`,
-        }}
-      />
+                  {/* เส้นสีน้ำเงินตามสถานะ */}
+                  <div
+                    className="absolute h-[2px] bg-[#3B82F6] z-[1] transition-all duration-500"
+                    style={{
+                      top: "20px",
+                      left: "12.5%",
+                      width: `${(currentStepIndex / (steps.length - 1)) * 75}%`,
+                    }}
+                  />
 
-      <div className="relative z-10 flex items-start">
-        {steps.map((step, index) => (
-          <StatusStep
-            key={step.status}
-            icon={step.icon}
-            label={step.label}
-            isCompleted={index < currentStepIndex}
-            isCurrent={index === currentStepIndex}
-          />
-        ))}
-      </div>
-    </div>
-  </div>
-)}
-            
+                  <div className="relative z-10 flex items-start">
+                    {steps.map((step, index) => (
+                      <StatusStep
+                        key={step.status}
+                        icon={step.icon}
+                        label={step.label}
+                        isCompleted={index < currentStepIndex}
+                        isCurrent={index === currentStepIndex}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
               <h3 className="flex items-center gap-2 font-bold text-gray-800 mb-4 md:text-[20px]">
@@ -313,7 +320,7 @@ function OrderDetails() {
 
                     <div className="flex justify-between items-center border-t border-gray-50 pt-4">
                       <span className="text-[16px] font-medium text-gray-600">
-                        คืนเงินไปยัง
+                        ช่องทางชำระเงิน
                       </span>
                       <div className="text-right">
                         <p className="text-[16px] font-medium text-gray-900">
@@ -336,7 +343,8 @@ function OrderDetails() {
                       </div>
                     </div>
 
-                    <div className=" flex
+                    <div
+                      className=" flex
   justify-between
   items-center
   gap-3
@@ -344,7 +352,8 @@ function OrderDetails() {
   max-[400px]:pt-0
   min-[401px]:border-t
   min-[401px]:border-gray-50
-  min-[401px]:pt-4">
+  min-[401px]:pt-4"
+                    >
                       <span className="text-[14px] md:text-[16px] font-medium text-gray-600  whitespace-nowrap">
                         ช่องทางชำระเงิน
                       </span>
@@ -386,131 +395,128 @@ function OrderDetails() {
             )}
           </div>
           {!isCancelledOrRefunded && (
-  <div className="lg:col-span-1">
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden sticky top-6">
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden sticky top-6">
+                {/* ================= MOBILE 300-400px ================= */}
+                <div className="min-[401px]:hidden">
+                  {/* Header */}
+                  <div className="bg-[#3B82F6] text-white px-4 py-3 text-center">
+                    <h3 className="font-bold text-base">ข้อมูลผู้รับ</h3>
+                  </div>
 
-      {/* ================= MOBILE 300-400px ================= */}
-      <div className="min-[401px]:hidden">
-        {/* Header */}
-        <div className="bg-[#3B82F6] text-white px-4 py-3 text-center">
-          <h3 className="font-bold text-base">ข้อมูลผู้รับ</h3>
-        </div>
+                  {/* Content */}
+                  <div className="px-4 py-4 text-sm text-gray-700">
+                    {/* ชื่อ + เบอร์ */}
+                    <div className="flex items-center gap-4 mb-4">
+                      <p className="font-bold text-gray-900 whitespace-nowrap">
+                        {recipient?.recipientName}
+                      </p>
 
-        {/* Content */}
-        <div className="px-4 py-4 text-sm text-gray-700">
-          
-          {/* ชื่อ + เบอร์ */}
-          <div className="flex items-center gap-4 mb-4">
-            <p className="font-bold text-gray-900 whitespace-nowrap">
-              {recipient?.recipientName}
-            </p>
+                      <p className="text-gray-700 whitespace-nowrap">
+                        {recipient?.phone}
+                      </p>
+                    </div>
 
-            <p className="text-gray-700 whitespace-nowrap">
-              {recipient?.phone}
-            </p>
-          </div>
+                    {/* ที่อยู่ */}
+                    <div className="pl-3 leading-relaxed text-gray-700">
+                      {recipient?.streetAddress}
 
-          {/* ที่อยู่ */}
-          <div className="pl-3 leading-relaxed text-gray-700">
-            {recipient?.streetAddress}
+                      {recipient?.subdistrict && (
+                        <>
+                          {" "}
+                          {recipient.subdistrict} {recipient.district}
+                        </>
+                      )}
 
-            {recipient?.subdistrict && (
-              <>
-                {" "}
-                {recipient.subdistrict} {recipient.district}
-              </>
-            )}
+                      {recipient?.province && (
+                        <>
+                          {" "}
+                          {recipient.province} {recipient.zipcode}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-            {recipient?.province && (
-              <>
-                {" "}
-                {recipient.province} {recipient.zipcode}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+                {/* ================= 401px ขึ้นไป ================= */}
+                <div className="hidden min-[401px]:block">
+                  <div className="bg-[#3B82F6] text-white px-5 py-3 flex items-center gap-2">
+                    <Users className="text-lg" />
+                    <h3 className="font-extralight md:text-[20px] text-sm">
+                      ข้อมูลผู้รับ
+                    </h3>
+                  </div>
 
+                  <div className="p-5 flex flex-col gap-5">
+                    {/* ชื่อ */}
+                    <div>
+                      <p className="text-xs md:text-[16px] text-gray-500 font-normal mb-2">
+                        ชื่อผู้สั่งซื้อ
+                      </p>
 
-      {/* ================= 401px ขึ้นไป ================= */}
-      <div className="hidden min-[401px]:block">
-        <div className="bg-[#3B82F6] text-white px-5 py-3 flex items-center gap-2">
-          <Users className="text-lg" />
-          <h3 className="font-extralight md:text-[20px] text-sm">ข้อมูลผู้รับ</h3>
-        </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black">
+                          <FiUser />
+                        </div>
 
-        <div className="p-5 flex flex-col gap-5">
+                        <p className="font-bold md:text-[14px] text-sm text-gray-900">
+                          {recipient?.recipientName}
+                        </p>
+                      </div>
+                    </div>
 
-          {/* ชื่อ */}
-          <div>
-            <p className="text-xs md:text-[16px] text-gray-500 font-normal mb-2">
-              ชื่อผู้สั่งซื้อ
-            </p>
+                    {/* เบอร์โทร */}
+                    <div>
+                      <p className="text-xs md:text-[16px] text-gray-500 font-normal mb-2">
+                        เบอร์โทรศัพท์
+                      </p>
 
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black">
-                <FiUser />
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black">
+                          <FiPhone />
+                        </div>
+
+                        <p className="font-bold md:text-[14px] text-sm text-gray-900">
+                          {recipient?.phone}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* ที่อยู่ */}
+                    <div>
+                      <p className="text-xs md:text-[17px] text-gray-500 font-normal mb-2">
+                        ที่อยู่สำหรับการจัดส่ง
+                      </p>
+
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black shrink-0">
+                          <FiMapPin />
+                        </div>
+
+                        <div className="font-sans md:text-[14px] text-sm text-black leading-relaxed">
+                          {recipient?.streetAddress}
+
+                          {recipient?.subdistrict && (
+                            <>
+                              <br />
+                              {recipient.subdistrict} {recipient.district}
+                            </>
+                          )}
+
+                          {recipient?.province && (
+                            <>
+                              <br />
+                              {recipient.province} {recipient.zipcode}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-
-              <p className="font-bold md:text-[14px] text-sm text-gray-900">
-                {recipient?.recipientName}
-              </p>
             </div>
-          </div>
-
-          {/* เบอร์โทร */}
-          <div>
-            <p className="text-xs md:text-[16px] text-gray-500 font-normal mb-2">
-              เบอร์โทรศัพท์
-            </p>
-
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black">
-                <FiPhone />
-              </div>
-
-              <p className="font-bold md:text-[14px] text-sm text-gray-900">
-                {recipient?.phone}
-              </p>
-            </div>
-          </div>
-
-          {/* ที่อยู่ */}
-          <div>
-            <p className="text-xs md:text-[17px] text-gray-500 font-normal mb-2">
-              ที่อยู่สำหรับการจัดส่ง
-            </p>
-
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black shrink-0">
-                <FiMapPin />
-              </div>
-
-              <div className="font-sans md:text-[14px] text-sm text-black leading-relaxed">
-                {recipient?.streetAddress}
-
-                {recipient?.subdistrict && (
-                  <>
-                    <br />
-                    {recipient.subdistrict} {recipient.district}
-                  </>
-                )}
-
-                {recipient?.province && (
-                  <>
-                    <br />
-                    {recipient.province} {recipient.zipcode}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+          )}
         </div>
       </div>
     </div>

@@ -104,27 +104,14 @@ function SidebarAdmin() {
           <li>
             <button
               data-test="dashboard-button"
-              className={menuClass([
-                "/dashboard",
-              ])}
-              onClick={() =>
-                navigate("/dashboard")
-              }
+              className={menuClass(["/dashboard"])}
+              onClick={() => navigate("/dashboard")}
             >
               <LayoutDashboard size={18} />
               แดชบอร์ด
             </button>
           </li>
-          <li>
-            <button
-              data-test="report-button"
-              className={menuClass(["/analytic"])}
-              onClick={() => navigate("/analytic")}
-            >
-              <TrendingUp size={18} />
-              รายงานยอดขาย
-            </button>
-          </li>
+
           <li>
             <button
               data-test="stock-button"
@@ -171,7 +158,6 @@ function SidebarAdmin() {
             )}
 
             {isOwner && (
-              
               <li>
                 <button
                   data-test="store-edit-button"
