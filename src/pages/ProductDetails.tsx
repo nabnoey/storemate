@@ -45,7 +45,7 @@ const ProductDetailPage: React.FC = () => {
   const [buyQuantity, setBuyQuantity] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   // const [openMenuId, setOpenMenuId] = useState<number | string | null>(null);
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { selectedProduct: productDetail, loading } = useSelector(
     (state: RootState) => state.products,
   );
@@ -94,23 +94,35 @@ const ProductDetailPage: React.FC = () => {
   }, [productDetail]);
 
   const handleIncrease = () => {
-    if (buyQuantity < currentStock) {
-      setBuyQuantity((prev) => prev + 1);
-    } else {
-      toast.error("จำนวนสินค้าในสต็อกไม่เพียงพอ");
-    }
+    if (isProcessing) return;
+
+    setBuyQuantity((prev) => {
+      if (prev >= currentStock) {
+        toast.error("จำนวนสินค้าในสต็อกไม่เพียงพอ");
+        return prev;
+      }
+
+      return prev + 1;
+    });
   };
 
   const handleDecrease = () => {
-    if (buyQuantity > 1) {
-      setBuyQuantity((prev) => prev - 1);
-    }
+    if (isProcessing) return;
+
+    setBuyQuantity((prev) => {
+      if (prev <= 1) {
+        return 1;
+      }
+
+      return prev - 1;
+    });
   };
 
   //ไปที่หน้าตะน้าสินค้า
   const handleAddToCart = async (shouldRedirect = false) => {
+    if (isProcessing) return;
+
     const token = TokenService.getAccessToken();
-    if (isAddingToCart) return;
 
     if (!token) {
       toast.error("กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงรถเข็น");
@@ -136,7 +148,7 @@ const ProductDetailPage: React.FC = () => {
       return;
     }
 
-    setIsAddingToCart(true);
+    setIsProcessing(true);
 
     const cartItemPayload: CartItemRequestDTO = {
       productId: productDetail.id,
@@ -162,33 +174,44 @@ const ProductDetailPage: React.FC = () => {
         toast.error(backendMessage);
       }
     } finally {
-      setIsAddingToCart(false);
+      setIsProcessing(false);
     }
   };
 
   //สั่งซื้อเลย
   const handleBuyNow = async () => {
+    if (isProcessing) return;
+
+    setIsProcessing(true);
+
     const token = TokenService.getAccessToken();
 
     if (!token) {
+      setIsProcessing(false);
       toast.error("กรุณาเข้าสู่ระบบก่อนทำการสั่งซื้อ");
       navigate("/login");
       return;
     }
 
+    if (!productDetail) {
+      setIsProcessing(false);
+      toast.error("ไม่พบข้อมูลสินค้า");
+      return;
+    }
+
     if (isUnavailable) {
+      setIsProcessing(false);
       toast.error("สินค้านี้ไม่พร้อมจำหน่าย");
       return;
     }
 
     if (buyQuantity > currentStock) {
+      setIsProcessing(false);
       toast.error(
         `จำนวนสินค้าในสต็อกไม่เพียงพอ (คงเหลือ ${currentStock} ชิ้น)`,
       );
       return;
     }
-
-    // const totalQuantity = quantityInCart + buyQuantity;
 
     const checkoutData = {
       isBuyNow: true,
@@ -197,13 +220,10 @@ const ProductDetailPage: React.FC = () => {
           productId: productDetail.id,
           cartItemId: null,
           quantity: buyQuantity,
-          // quantity: totalQuantity,
           price: productDetail.price,
           totalPrice: productDetail.price * buyQuantity,
-
           productName: productDetail.productName,
           imageUrl: activeImage || productDetail.productImages?.[0]?.imageUrl,
-
           product: {
             id: productDetail.id,
             productName: productDetail.productName,
@@ -215,7 +235,9 @@ const ProductDetailPage: React.FC = () => {
       total: productDetail.price * buyQuantity,
     };
 
-    navigate("/payment", { state: checkoutData });
+    navigate("/payment", {
+      state: checkoutData,
+    });
   };
 
   const formatDate = (dateString?: string) => {
@@ -418,7 +440,11 @@ const ProductDetailPage: React.FC = () => {
                       <button
                         type="button"
                         data-test="btn-decrease"
-                        disabled={isUnavailable}
+                        disabled={
+                          isUnavailable ||
+                          isProcessing ||
+                          buyQuantity >= currentStock
+                        }
                         onClick={handleDecrease}
                         className="flex-1 h-full flex items-center justify-center cursor-pointer text-lg font-medium text-black transition-colors"
                       >
@@ -430,7 +456,11 @@ const ProductDetailPage: React.FC = () => {
                       <button
                         type="button"
                         data-test="btn-increase"
-                        disabled={isUnavailable}
+                        disabled={
+                          isUnavailable ||
+                          isProcessing ||
+                          buyQuantity >= currentStock
+                        }
                         onClick={handleIncrease}
                         className="flex-1 h-full flex items-center justify-center cursor-pointer text-lg font-medium text-black transition-colors"
                       >
@@ -450,10 +480,10 @@ const ProductDetailPage: React.FC = () => {
                   <button
                     type="button"
                     data-test="btn-add-to-cart"
-                    disabled={isUnavailable}
+                    disabled={isUnavailable || isProcessing}
                     onClick={() => handleAddToCart(false)}
                     className={`w-[120px] h-[44px] flex items-center justify-center gap-[10px] p-[10px] rounded font-semibold text-[15px] transition-colors shadow-sm ${
-                      isUnavailable
+                      isUnavailable || isProcessing
                         ? "bg-gray-400 cursor-not-allowed text-white"
                         : "bg-[#3B82F6] hover:bg-blue-600 text-white cursor-pointer"
                     }`}
@@ -464,10 +494,10 @@ const ProductDetailPage: React.FC = () => {
                   <button
                     type="button"
                     data-test="btn-buy-cart"
-                    disabled={isUnavailable}
+                    disabled={isUnavailable || isProcessing}
                     onClick={handleBuyNow}
                     className={`w-[120px] h-[44px] flex items-center justify-center gap-[10px] p-[10px] rounded font-semibold text-[15px] transition-colors shadow-sm ${
-                      isUnavailable
+                      isUnavailable || isProcessing
                         ? "bg-gray-400 cursor-not-allowed text-white"
                         : "bg-[#10B981] hover:bg-[#059669] text-white cursor-pointer"
                     }`}
