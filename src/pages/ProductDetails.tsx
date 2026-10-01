@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -46,6 +46,7 @@ const ProductDetailPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   // const [openMenuId, setOpenMenuId] = useState<number | string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const processingRef = useRef(false);
   const { selectedProduct: productDetail, loading } = useSelector(
     (state: RootState) => state.products,
   );
@@ -120,44 +121,51 @@ const ProductDetailPage: React.FC = () => {
 
   //ไปที่หน้าตะน้าสินค้า
   const handleAddToCart = async (shouldRedirect = false) => {
-    if (isProcessing) return;
+    if (processingRef.current) return;
 
-    const token = TokenService.getAccessToken();
-
-    if (!token) {
-      toast.error("กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงรถเข็น");
-      navigate("/login");
-      return;
-    }
-
-    if (isUnavailable) {
-      toast.error("สินค้านี้ไม่พร้อมจำหน่าย");
-      return;
-    }
-
-    const totalProposedQuantity = quantityInCart + buyQuantity;
-
-    if (totalProposedQuantity > currentStock) {
-      if (quantityInCart > 0) {
-        toast.error(
-          `ไม่สามารถเพิ่มจำนวนสินค้าได้ เนื่องจากคุณเพิ่มสินค้านี้ไว้ในรถเข็นเเล้ว ${quantityInCart} ชิ้น`,
-        );
-      } else {
-        toast.error(`จำนวนสินค้าในสต็อกไม่เพียงพอ`);
-      }
-      return;
-    }
-
+    processingRef.current = true;
     setIsProcessing(true);
 
-    const cartItemPayload: CartItemRequestDTO = {
-      productId: productDetail.id,
-      quantity: buyQuantity,
-    };
-
     try {
+      const token = TokenService.getAccessToken();
+
+      if (!token) {
+        toast.error("กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงรถเข็น");
+        navigate("/login");
+        return;
+      }
+
+      if (isUnavailable) {
+        toast.error("สินค้านี้ไม่พร้อมจำหน่าย");
+        return;
+      }
+
+      const totalProposedQuantity = quantityInCart + buyQuantity;
+
+      if (totalProposedQuantity > currentStock) {
+        if (quantityInCart > 0) {
+          toast.error(
+            `ไม่สามารถเพิ่มจำนวนสินค้าได้ เนื่องจากคุณเพิ่มสินค้านี้ไว้ในรถเข็นแล้ว ${quantityInCart} ชิ้น`,
+            {
+              id: "insufficient-cart-stock",
+            },
+          );
+        } else {
+          toast.error("จำนวนสินค้าในสต็อกไม่เพียงพอ");
+        }
+
+        return;
+      }
+
+      const cartItemPayload: CartItemRequestDTO = {
+        productId: productDetail.id,
+        quantity: buyQuantity,
+      };
+
       await dispatch(addToCartThunk(cartItemPayload)).unwrap();
+
       toast.success("เพิ่มสินค้าเข้ารถเข็นเรียบร้อยแล้ว");
+
       setBuyQuantity(1);
 
       if (shouldRedirect) {
@@ -165,15 +173,18 @@ const ProductDetailPage: React.FC = () => {
       }
     } catch (error: unknown) {
       let backendMessage = "ไม่สามารถเพิ่มสินค้าได้";
+
       if (axios.isAxiosError(error)) {
         backendMessage = error.response?.data?.message || error.message;
       }
+
       if (backendMessage === "There is insufficient stock.") {
         toast.error("จำนวนสินค้าในสต็อกไม่เพียงพอ");
       } else {
         toast.error(backendMessage);
       }
     } finally {
+      processingRef.current = false;
       setIsProcessing(false);
     }
   };
@@ -206,7 +217,7 @@ const ProductDetailPage: React.FC = () => {
     }
 
     if (buyQuantity > currentStock) {
-      setIsProcessing(false);
+      setIsProcessing(true);
       toast.error(
         `จำนวนสินค้าในสต็อกไม่เพียงพอ (คงเหลือ ${currentStock} ชิ้น)`,
       );
