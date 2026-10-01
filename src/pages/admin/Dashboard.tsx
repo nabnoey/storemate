@@ -678,9 +678,9 @@ function Dashboard() {
               </span>
             </div>
 
-            {/* 3. ลูกค้าใหม่ */}
+            {/* 3. ผู้ใช้ใหม่ */}
             <div className="flex flex-col sm:pl-6 pt-4 sm:pt-0">
-              <span className="text-xs font-medium text-gray-500 mb-2">ลูกค้าใหม่ (คน)</span>
+              <span className="text-xs font-medium text-gray-500 mb-2">ผู้ใช้ใหม่ (คน)</span>
               <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
                 {newUsersDisplay}
               </span>
