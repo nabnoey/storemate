@@ -5,7 +5,6 @@ import {
   Users,
   Settings,
   LogOut,
-  TrendingUp,
   Truck,
   CircleDollarSign,
   Bell,
