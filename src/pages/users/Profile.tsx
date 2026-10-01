@@ -10,7 +10,6 @@ import {
 } from "../../redux/auth/authReducer";
 import type { RootState } from "../../redux/store";
 import ProfileSidebar from "../../components/user/ProfileSidebar";
-// import Loading from "../../components/loading/Loading";
 import { Icon } from "@iconify/react";
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -280,15 +279,18 @@ const ProfilePage = () => {
     try {
       if (activeModal === "email") {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
         if (!emailRegex.test(tempData.email)) {
           toast.error("กรุณากรอกอีเมลให้ถูกต้อง");
           return;
         }
       }
 
-      if (tempData.phone && !/^0\d{9}$/.test(tempData.phone)) {
-        toast.error("เบอร์โทรต้องขึ้นต้นด้วย 0 และมี 10 หลัก");
-        return;
+      if (activeModal === "phone") {
+        if (!/^0\d{9}$/.test(tempData.phone)) {
+          toast.error("เบอร์โทรต้องขึ้นต้นด้วย 0 และมี 10 หลัก");
+          return;
+        }
       }
 
       const userData = {
