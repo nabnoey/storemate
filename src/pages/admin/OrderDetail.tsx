@@ -19,7 +19,7 @@ import { FaHistory } from "react-icons/fa";
 import { Users } from "lucide-react";
 import type { RootState, AppDispatch } from "../../redux/store";
 import {
-  STATUS_LABELS,
+  STATUS_ORDER_LABELS,
   STATUS_ORDER,
   type OrderItem,
 } from "../../types/moderator/ordersMod";
@@ -275,7 +275,7 @@ const handleUpdateStatus = async () => {
                           onChange={(e) => setSelectedStatus(e.target.value)}
                           className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 pr-8"
                         >
-                       {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                       {Object.entries(STATUS_ORDER_LABELS).map(([key, label]) => (
   <option key={key} value={key}>
     {label}
   </option>
@@ -373,7 +373,7 @@ const handleUpdateStatus = async () => {
                       <div className="absolute -left-[5px] top-1.5 w-2 h-2 bg-green-500 rounded-full ring-4 ring-green-100" />
 
                       <p className="font-bold text-sm text-gray-800">
-                        {STATUS_LABELS[history.status] || history.status}
+                        {STATUS_ORDER_LABELS[history.status] || history.status}
                       </p>
 
                       <p className="text-xs text-gray-400 mt-1">
