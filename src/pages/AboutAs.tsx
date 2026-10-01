@@ -271,10 +271,13 @@ const AboutUs = () => {
                     ปลุกความสดชื่น เติมพลังสีแดง... ด้วยพลังธรรมชาติ 100%
                   </h2>
 
-                  <div className="self-end flex flex-col items-start justify-start text-left text-white font-['Anuphan'] font-normal text-[12px] leading-[20px] gap-0.5 mt-2">
-                    <p>จากภูมิปัญญาหลังบ้าน</p>
-                    <p>สู่ผลิตภัณฑ์คุณภาพ...</p>
-                    <p>ปัดฝุ่นสมุนไพรไทยให้กลับมา</p>
+                  <div className=" self-start w-full
+    flex flex-col items-start justify-start
+    text-left text-white
+    font-['Anuphan'] font-normal
+    text-[12px] leading-[20px]
+    gap-0.5 mt-2">
+                   จากภูมิปัญญาหลังบ้าน สู่ผลิตภัณฑ์คุณภาพ...ปัดฝุ่นสมุนไพรไทยให้กลับมา
                   </div>
                 </div>
 

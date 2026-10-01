@@ -113,38 +113,16 @@ function Orders() {
     setSearchParams,
   ]);
 
-  const reactToPrintFn = useReactToPrint({
+const reactToPrintFn = useReactToPrint({
   contentRef: printRef,
   documentTitle: "ใบปะหน้าพัสดุ",
 
-  onAfterPrint: async () => {
-    // ดึงข้อมูลใหม่ เพื่อเอาค่า is_printed ล่าสุด
-    await dispatch(
-      fetchAllOrders({
-        page: currentPage - 1,
-        size: PAGE_SIZE,
-        keyword: submittedSearchTerm || undefined,
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-        period: periodValue,
-      }),
-    );
-
-    // เอาติ๊กที่เลือกออก
+  onAfterPrint: () => {
     setSelectedOrders([]);
-
-    // ออกจากโหมดปริ้น
     setIsPrintMode(false);
-
-    // เคลียร์ข้อมูลที่ใช้ปริ้น
     setPrintData([]);
   },
 });
-  // const reactToPrintFn = useReactToPrint({
-  //   contentRef: printRef,
-  //   documentTitle: "ใบปะหน้าพัสดุ",
-  // });
-
   useEffect(() => {
     if (printData.length > 0) {
       const timer = setTimeout(() => {
@@ -171,29 +149,46 @@ function Orders() {
     setSelectedOrders([]);
     setIsPrintMode(false);
   };
+const handleConfirmPrint = async () => {
+  const selectedData = orders.filter((order) =>
+    selectedOrders.includes(order.orderNo),
+  );
 
-  const handleConfirmPrint = async () => {
-    //selectedData รายการคำสั่งซื้อที่ผู้ใช้เลือกไว้
-    const selectedData = orders.filter((order) =>
-      selectedOrders.includes(order.orderNo),
+  if (selectedData.length === 0) return;
+
+  if (selectedData.some((order) => order.status !== "PROCESSING")) {
+    toast.error(
+      "สามารถพิมพ์ใบปะหน้าได้เฉพาะคำสั่งซื้อสถานะ 'ที่ต้องจัดส่ง' เท่านั้น",
     );
-    if (selectedData.length === 0) return;
+    return;
+  }
 
-    if (selectedData.some((order) => order.status !== "PROCESSING")) {
-      toast.error(
-        "สามารถพิมพ์ใบปะหน้าได้เฉพาะคำสั่งซื้อสถานะ 'ที่ต้องจัดส่ง' เท่านั้น",
-      );
-      return;
-    }
+  try {
+    const orderIds = selectedData.map((order) => order.id);
 
-    try {
-      const orderIds = selectedData.map((order) => order.id);
-      const printedLabels = await dispatch(shippingOrder(orderIds)).unwrap();
-      setPrintData(printedLabels);
-    } catch {
-      toast.error("ไม่สามารถอัปเดตสถานะการพิมพ์ใบปะหน้าได้");
-    }
-  };
+    // 1. แจ้ง backend ว่า order เหล่านี้ถูกสร้างใบปะหน้าแล้ว
+    const printedLabels = await dispatch(
+      shippingOrder(orderIds),
+    ).unwrap();
+
+    // 2. ดึงรายการใหม่ เพื่อให้ is_printed อัปเดตเป็น true
+    await dispatch(
+      fetchAllOrders({
+        page: currentPage - 1,
+        size: PAGE_SIZE,
+        keyword: submittedSearchTerm || undefined,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        period: periodValue,
+      }),
+    );
+
+    // 3. ส่งข้อมูลไปหน้า print
+    setPrintData(printedLabels);
+  } catch {
+    toast.error("ไม่สามารถอัปเดตสถานะการพิมพ์ใบปะหน้าได้");
+  }
+};
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-start text-left w-full">
@@ -439,7 +434,7 @@ function Orders() {
                         >
                           <td className="py-4 px-2">
                             <div className="flex items-center gap-3">
-                              {isPrintMode && (
+                              {/* {isPrintMode && (
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -457,7 +452,25 @@ function Orders() {
                                     </span>
                                   )}
                                 </button>
-                              )}
+                              )} */}
+
+                              {isPrintMode && !order.is_printed && (
+  <button
+    type="button"
+    onClick={() => handleSelectOrder(order.orderNo)}
+    className={`w-5 h-5 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors ${
+      isSelected
+        ? "bg-blue-700 border-blue-700"
+        : "border-gray-300 bg-white"
+    }`}
+  >
+    {isSelected && (
+      <span className="text-white text-[10px]">
+        ✓
+      </span>
+    )}
+  </button>
+)}
                               <span className="text-gray-600 font-medium">
                                 {order.orderNo}
                               </span>
@@ -496,33 +509,46 @@ function Orders() {
                               {STATUS_LABELS[order.status] || order.status}
                             </span>
                           </td>
-                          <td className="py-4 text-right text-xs space-x-3 pr-2">
-                            {order.is_printed && (
-                              <span className="text-[#60A5FA] text-xs font-medium">
-                                printed
-                              </span>
-                            )}
-                            {isPrintMode ? (
-                              <button
-                                type="button"
-                                onClick={() => handleSelectOrder(order.orderNo)}
-                                className="text-blue-600 hover:underline font-medium cursor-pointer"
-                              ></button>
-                            ) : (
-                              <button
-                                type="button"
-                                data-test={`menagemate-order-${order.orderNo}`}
-                                onClick={() =>
-                                  navigate(
-                                    `/orders-management/${order.orderNo}`,
-                                  )
-                                }
-                                className="text-blue-600 hover:underline font-medium cursor-pointer"
-                              >
-                                จัดการ
-                              </button>
-                            )}
-                          </td>
+
+                          {/* <td className="py-4 text-right text-xs pr-2">
+  {isPrintMode ? (
+    order.is_printed ? (
+      <span className="text-[#3B82F6] text-xs font-medium">
+        printed
+      </span>
+    ) : null
+  ) : (
+    <button
+      type="button"
+      data-test={`menagemate-order-${order.orderNo}`}
+      onClick={() =>
+        navigate(`/orders-management/${order.orderNo}`)
+      }
+      className="text-blue-600 hover:underline font-medium cursor-pointer"
+    >
+      จัดการ
+    </button>
+  )}
+</td> */}
+
+<td className="py-4 text-right text-xs pr-2">
+  {order.is_printed ? (
+    <span className="text-[#3B82F6] text-xs font-medium">
+      printed
+    </span>
+  ) : !isPrintMode ? (
+    <button
+      type="button"
+      data-test={`menagemate-order-${order.orderNo}`}
+      onClick={() =>
+        navigate(`/orders-management/${order.orderNo}`)
+      }
+      className="text-blue-600 hover:underline font-medium cursor-pointer"
+    >
+      จัดการ
+    </button>
+  ) : null}
+</td>
                         </tr>
                       );
                     })
