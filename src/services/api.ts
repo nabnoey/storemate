@@ -30,17 +30,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      const url = error.config?.url || "";
-      const isLoginAPI = url.includes("/login");
-      const isDashboardAPI = url.includes("/owner/dashboard") || url.includes("/owner/sales-analytics");
-      const isDeleteProductAPI =
-        url.includes("/products") &&
-        error.config?.method === "delete";
-
-      if (!isLoginAPI && !isDeleteProductAPI && !isDashboardAPI) {
+      const isLoginAPI = error.config.url?.includes("/login");
+      if (!isLoginAPI) {
         TokenService.removeToken();
         store.dispatch(logout());
-        //window.location.href = "/login";
+        // window.location.href = "/login";
       }
     }
     return Promise.reject(error);
