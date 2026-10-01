@@ -71,25 +71,6 @@ const OrderCard = ({ order, actionButtons }: OrderCardProps) => {
     {order.orderNo}
   </span>
 </p>
-          {/* <p
- className="
-    font-semibold
-    text-black
-    text-[13px]
-    sm:text-[16px]
-    leading-tight
-
-    max-[400px]:max-w-[120px]
-    max-[400px]:overflow-hidden
-    max-[400px]:whitespace-nowrap
-
-    sm:max-w-none
-    sm:whitespace-normal
-  "
-            data-test={`card-order-${order.orderNo}`}
-          >
-            {`${order.orderNo}`}
-          </p> */}
         </div>
         <div className="min-w-0 px-1">
           <p className="text-[10px] min-[400px]:text-[11px] sm:text-sm text-gray-500 mb-1">

@@ -373,7 +373,7 @@ const handleSetDefault = async (addressId: number) => {
 
         {/* 2. Mobile Header Bar (Sticky Top) */}
         <div
-          className="md:hidden bg-white sticky mt-8 z-40 px-4 py-3.5 border-b border-gray-200 flex items-center gap-3 shadow-sm cursor-pointer"
+          className="md:hidden bg-white sticky md:mt-8 mt-0 z-40 px-4 py-3.5 border-b border-gray-200 flex items-center gap-3 shadow-sm cursor-pointer"
           data-test="mobile-header-bar"
         >
           <button
@@ -393,7 +393,7 @@ const handleSetDefault = async (addressId: number) => {
           >
             <Icon icon="material-symbols:arrow-back" className="w-6 h-6" />
           </button>
-          <h1 className="text-lg font-bold text-gray-900">ที่อยู่ของฉัน</h1>
+          <h1 className="text-lg  font-bold text-gray-900">ที่อยู่ของฉัน</h1>
         </div>
 
         {/* Main Content Layout */}
