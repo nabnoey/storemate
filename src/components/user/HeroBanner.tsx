@@ -91,7 +91,7 @@ function HeroBanner() {
     <img
       src={storeImg.promotionImage}
       alt="Promotion"
-      className="w-full h-full object-contain"
+      className="w-full h-full object-cover"
     />
   ) : (
     <div className="w-full h-full rounded-xl bg-gray-200 animate-pulse" />
