@@ -63,9 +63,16 @@ function Contact() {
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6 max-w-[600px] mx-auto">
-          <ContactCard icon="fa6-brands:line" color="text-green-500">
-            @Pattong
-          </ContactCard>
+          <a
+    href="http://lin.ee/8dRW7oV"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="block"
+  >
+    <ContactCard icon="fa6-brands:line" color="text-green-500">
+      StoreMate Official
+    </ContactCard>
+  </a>
 
           <a
             href="https://www.facebook.com/Padthong636"

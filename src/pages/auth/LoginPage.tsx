@@ -41,58 +41,66 @@ function LoginPage() {
     setLoading(true);
     const toastId = toast.loading("กำลังเข้าสู่ระบบ...");
 
-    try {
-      const token = await dispatch(
-        login({
-          email: email.toLowerCase(),
-          password: password,
-        }),
-      ).unwrap();
+   try {
+  const token = await dispatch(
+    login({
+      email: email.toLowerCase(),
+      password,
+    }),
+  ).unwrap();
 
-      if (rememberMe) {
-        Cookies.set("remember_email", email, {
-          expires: 30,
-        });
-      } else {
-        Cookies.remove("remember_email");
-      }
+  if (rememberMe) {
+    Cookies.set("remember_email", email, {
+      expires: 30,
+    });
+  } else {
+    Cookies.remove("remember_email");
+  }
 
-      toast.dismiss();
-      toast.success("เข้าสู่ระบบสำเร็จ", { id: toastId });
+  toast.success("เข้าสู่ระบบสำเร็จ", { id: toastId });
 
-      setTimeout(() => {
-        try {
-          const decoded: any = jwtDecode(token);
-          const userRoles = decoded.roles || [];
-          const roles = userRoles.map((role: any) =>
-            typeof role === "object" && role?.roleName ? role.roleName : role,
-          );
+  try {
+    const decoded: any = jwtDecode(token);
 
-          if (roles.includes("ADMIN")) {
-            navigate("/dashboard");
-          } else if (roles.includes("MODERATOR")) {
-            navigate("/dashboard");
-          } else {
-            navigate("/");
-          }
-        } catch (decodeError) {
-          navigate("/");
-        }
-      }, 1000);
-    } catch (error: any) {
-      let errorMessage = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+    const userRoles = decoded.roles || [];
 
-      const apiErrorMsg =
-        error?.message?.toLowerCase() || typeof error === "string"
-          ? error.toLowerCase()
-          : "";
-      if (apiErrorMsg.includes("suspend") || apiErrorMsg.includes("banned")) {
-        errorMessage = "บัญชีนี้ถูกระงับการใช้งาน";
-      }
-      toast.error(errorMessage, { id: toastId });
-    } finally {
-      setLoading(false);
+    const roles = userRoles.map((role: any) =>
+      typeof role === "object" && role?.roleName
+        ? role.roleName
+        : role,
+    );
+
+    if (
+      roles.includes("OWNER") ||
+      roles.includes("ADMIN") ||
+      roles.includes("MODERATOR")
+    ) {
+      navigate("/dashboard", { replace: true });
+    } else {
+      navigate("/", { replace: true });
     }
+  } catch {
+    navigate("/", { replace: true });
+  }
+} catch (error: any) {
+  let errorMessage = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+
+  const apiErrorMsg =
+    typeof error === "string"
+      ? error.toLowerCase()
+      : error?.message?.toLowerCase() || "";
+
+  if (
+    apiErrorMsg.includes("suspend") ||
+    apiErrorMsg.includes("banned")
+  ) {
+    errorMessage = "บัญชีนี้ถูกระงับการใช้งาน";
+  }
+
+  toast.error(errorMessage, { id: toastId });
+} finally {
+  setLoading(false);
+}
   };
 
   return (
