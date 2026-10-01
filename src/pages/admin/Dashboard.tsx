@@ -46,25 +46,6 @@ const formatMoneyCompact = (val: number | undefined | null, fallback = "฿ 0") 
   return `฿ ${Math.round(val).toLocaleString()}`;
 };
 
-// Month name shortener in Thai
-const formatMonthName = (m?: string) => {
-  if (!m) return "";
-  const monthMap: Record<string, string> = {
-    "มกราคม": "ม.ค.",
-    "กุมภาพันธ์": "ก.พ.",
-    "มีนาคม": "มี.ค.",
-    "เมษายน": "เม.ย.",
-    "พฤษภาคม": "พ.ค.",
-    "มิถุนายน": "มิ.ย.",
-    "กรกฎาคม": "ก.ค.",
-    "สิงหาคม": "ส.ค.",
-    "กันยายน": "ก.ย.",
-    "ตุลาคม": "ต.ค.",
-    "พฤศจิกายน": "พ.ย.",
-    "ธันวาคม": "ธ.ค.",
-  };
-  return monthMap[m] || m;
-};
 
 // Shorten region names for axis display
 const shortenRegionName = (name: string) => {
@@ -81,6 +62,36 @@ const formatShortProductName = (name: string, maxLen = 25) => {
   return `${trimmed.slice(0, maxLen).trim()}...`;
 };
 
+// =========================================================================
+// MOCKUP DATA FOR INCOME COMPARISON (เปรียบเทียบรายได้)
+// =========================================================================
+const MONTH_NAMES = [
+  "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+  "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
+];
+
+const MONTHLY_MOCK_DATA: Record<string, number[]> = {
+  "2024": [60000, 75000, 70000, 90000, 120000, 100000, 145000, 120000, 180000, 150000, 200000, 210000],
+  "2025": [85000, 110000, 95000, 130000, 180000, 145000, 210000, 175000, 260000, 220000, 290000, 320000],
+  "2026": [105000, 125000, 140000, 160000, 220000, 190000, 250000, 230000, 480000, 300000, 350000, 390000],
+};
+
+const QUARTERLY_MOCK_DATA: Record<string, number[]> = {
+  "2024": [205000, 310000, 445000, 560000],
+  "2025": [290000, 455000, 645000, 830000],
+  "2026": [370000, 570000, 960000, 1040000],
+};
+
+const YEARLY_MOCK_DATA: Record<string, number> = {
+  "2020": 980000,
+  "2021": 1150000,
+  "2022": 1320000,
+  "2023": 1480000,
+  "2024": 1520000,
+  "2025": 2220000,
+  "2026": 2940000,
+};
+
 function Dashboard() {
   const dispatch = useDispatch<AppDispatch>();
   const { dashData: rawDashData, loading } = useSelector((state: RootState) => state.owner) as {
@@ -91,8 +102,10 @@ function Dashboard() {
   // Filter States
   const [selectedPeriod, setSelectedPeriod] = useState<'สัปดาห์' | 'เดือน' | 'ไตรมาส' | 'ปี'>('สัปดาห์');
   const [comparePeriod, setComparePeriod] = useState<'เดือน' | 'ไตรมาส' | 'ปี'>('เดือน');
-  const [year1, setYear1] = useState('2025');
-  const [year2, setYear2] = useState('2026');
+  const [side1Selection, setSide1Selection] = useState('2025');
+  const [side2Selection, setSide2Selection] = useState('2026');
+  const [yearRangeStart, setYearRangeStart] = useState('2020');
+  const [yearRangeEnd, setYearRangeEnd] = useState('2026');
 
   // Edit Product Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -138,54 +151,121 @@ function Dashboard() {
   const currentYearDisplay = rawDashData?.yearActiveIncomeChart?.thisYear?.year || "2026";
 
   // =========================================================================
-  // 2. เปรียบเทียบรายได้ (Income Comparison) [จริง 100%]
+  // 2. เปรียบเทียบรายได้ (Income Comparison) [Mockup Data]
   // =========================================================================
-  const yearIncome = rawDashData?.yearActiveIncomeChart;
-  const growthRate = yearIncome?.growthRate !== undefined ? yearIncome.growthRate : 100;
-  const growthRateStr = `${growthRate >= 0 ? '+' : ''}${growthRate.toFixed(1)}%`;
+  const {
+    comparisonChartData,
+    compTotal1,
+    compTotal2,
+    compGrowthRate,
+    compGrowthRateStr,
+    maxComparisonVal,
+    year1Label,
+    year2Label,
+  } = useMemo(() => {
+    const year1 = side1Selection;
+    const year2 = side2Selection;
 
-  const lastYearLabel = yearIncome?.lastYear?.year || year1 || "2025";
-  const thisYearLabel = yearIncome?.thisYear?.year || year2 || "2026";
+    let t1 = 0;
+    let t2 = 0;
+    let chartData: any[] = [];
+    let maxVal = 0;
 
-  const lastYearTotal = yearIncome?.lastYear?.totalIncome !== undefined
-    ? formatMoneyFull(yearIncome.lastYear.totalIncome)
-    : "฿ 0";
+    const label1 = `ปี ${year1}`;
+    const label2 = `ปี ${year2}`;
 
-  const thisYearTotal = yearIncome?.thisYear?.totalIncome !== undefined
-    ? formatMoneyFull(yearIncome.thisYear.totalIncome)
-    : "฿ 1,243,473";
+    if (comparePeriod === 'เดือน') {
+      const data1 = MONTHLY_MOCK_DATA[year1] || MONTHLY_MOCK_DATA["2025"];
+      const data2 = MONTHLY_MOCK_DATA[year2] || MONTHLY_MOCK_DATA["2026"];
 
-  // Comparison graph from API response
-  const yearlyComparisonChart = useMemo(() => {
-    if (yearIncome?.thisYear?.graph && yearIncome.thisYear.graph.length > 0) {
-      return yearIncome.thisYear.graph.map((item, idx) => ({
-        month: formatMonthName(item.month),
-        yLast: yearIncome?.lastYear?.graph?.[idx]?.totalMonthlyIncome || 0,
-        yThis: item.totalMonthlyIncome || 0,
-      }));
+      t1 = data1.reduce((acc, curr) => acc + curr, 0);
+      t2 = data2.reduce((acc, curr) => acc + curr, 0);
+
+      chartData = MONTH_NAMES.map((m, idx) => {
+        const val1 = data1[idx];
+        const val2 = data2[idx];
+        if (val1 > maxVal) maxVal = val1;
+        if (val2 > maxVal) maxVal = val2;
+        return {
+          label: m,
+          y1: val1,
+          y2: val2,
+        };
+      });
+    } else if (comparePeriod === 'ไตรมาส') {
+      const data1 = QUARTERLY_MOCK_DATA[year1] || QUARTERLY_MOCK_DATA["2025"];
+      const data2 = QUARTERLY_MOCK_DATA[year2] || QUARTERLY_MOCK_DATA["2026"];
+
+      t1 = data1.reduce((acc, curr) => acc + curr, 0);
+      t2 = data2.reduce((acc, curr) => acc + curr, 0);
+
+      const quarterLabels = ["Q1", "Q2", "Q3", "Q4"];
+      chartData = quarterLabels.map((q, idx) => {
+        const val1 = data1[idx];
+        const val2 = data2[idx];
+        if (val1 > maxVal) maxVal = val1;
+        if (val2 > maxVal) maxVal = val2;
+        return {
+          label: q,
+          y1: val1,
+          y2: val2,
+        };
+      });
+    } else {
+      // comparePeriod === 'ปี' (Range เช่น 2020 - 2026)
+      const sYr = parseInt(yearRangeStart) || 2020;
+      const eYr = parseInt(yearRangeEnd) || 2026;
+      const minYr = Math.min(sYr, eYr);
+      const maxYr = Math.max(sYr, eYr);
+
+      t1 = YEARLY_MOCK_DATA[String(minYr)] || 0;
+      t2 = YEARLY_MOCK_DATA[String(maxYr)] || 0;
+
+      const yearKeys: string[] = [];
+      for (let y = minYr; y <= maxYr; y++) {
+        yearKeys.push(String(y));
+      }
+
+      chartData = yearKeys.map((yr) => {
+        const rev = YEARLY_MOCK_DATA[yr] || 0;
+        if (rev > maxVal) maxVal = rev;
+        return {
+          label: `ปี ${yr}`,
+          revenue: rev,
+        };
+      });
+
+      const growth = t1 > 0 ? ((t2 - t1) / t1) * 100 : t2 > 0 ? 100 : 0;
+      const growthStr = `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`;
+      const yMax = maxVal > 0 ? Math.ceil((maxVal * 1.15) / 500000) * 500000 : 500000;
+
+      return {
+        comparisonChartData: chartData,
+        compTotal1: t1,
+        compTotal2: t2,
+        compGrowthRate: growth,
+        compGrowthRateStr: growthStr,
+        maxComparisonVal: yMax,
+        year1Label: `ปี ${minYr}`,
+        year2Label: `ปี ${maxYr}`,
+      };
     }
-    // Fallback if graph is empty
-    return [
-      { month: "ม.ค.", yLast: 0, yThis: 0 },
-      { month: "ก.พ.", yLast: 0, yThis: 0 },
-      { month: "มี.ค.", yLast: 0, yThis: 0 },
-      { month: "เม.ย.", yLast: 0, yThis: 0 },
-      { month: "พ.ค.", yLast: 0, yThis: 252505 },
-      { month: "มิ.ย.", yLast: 0, yThis: 3630 },
-      { month: "ก.ค.", yLast: 0, yThis: 257725 },
-      { month: "ส.ค.", yLast: 0, yThis: 175 },
-      { month: "ก.ย.", yLast: 0, yThis: 503025 },
-      { month: "ต.ค.", yLast: 0, yThis: 0 },
-      { month: "พ.ย.", yLast: 0, yThis: 0 },
-      { month: "ธ.ค.", yLast: 0, yThis: 0 },
-    ];
-  }, [yearIncome]);
 
-  // Max value calculation for comparison chart Y-Axis
-  const maxComparisonVal = useMemo(() => {
-    const maxVal = Math.max(...yearlyComparisonChart.map((d) => Math.max(d.yThis, d.yLast)), 0);
-    return maxVal > 0 ? Math.ceil(maxVal * 1.15) : 500000;
-  }, [yearlyComparisonChart]);
+    const growth = t1 > 0 ? ((t2 - t1) / t1) * 100 : t2 > 0 ? 100 : 0;
+    const growthStr = `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`;
+    const yMax = maxVal > 0 ? Math.ceil((maxVal * 1.15) / 50000) * 50000 : 500000;
+
+    return {
+      comparisonChartData: chartData,
+      compTotal1: t1,
+      compTotal2: t2,
+      compGrowthRate: growth,
+      compGrowthRateStr: growthStr,
+      maxComparisonVal: yMax,
+      year1Label: label1,
+      year2Label: label2,
+    };
+  }, [comparePeriod, side1Selection, side2Selection, yearRangeStart, yearRangeEnd]);
 
   // =========================================================================
   // 3. สินค้าขายดี (Top Products) [จริง: ชื่อ, รูปภาพ, สัดส่วน / คำนวณ: ยอดขาย, รายได้, ราคา / Mockup: คะแนนรีวิว]
@@ -627,9 +707,9 @@ function Dashboard() {
               <p className="text-xs text-gray-400 mt-0.5">เปรียบเทียบช่วงเวลาเดียวกัน</p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Period toggle pills */}
-              <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Period toggle pills: เดือน, ไตรมาส, ปี */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 {(['เดือน', 'ไตรมาส', 'ปี'] as const).map((p) => {
                   const isActive = comparePeriod === p;
                   return (
@@ -637,10 +717,10 @@ function Dashboard() {
                       key={p}
                       type="button"
                       onClick={() => setComparePeriod(p)}
-                      className={`cursor-pointer px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                      className={`cursor-pointer w-[64px] sm:w-[68px] py-2 rounded-xl text-xs text-center transition-all ${
                         isActive
-                          ? 'bg-[#1E293B] text-white'
-                          : 'bg-[#F1F5F9] text-gray-600 hover:bg-gray-200'
+                          ? 'bg-[#334155] text-white font-semibold shadow-sm'
+                          : 'bg-[#F1F5F9] text-gray-500 font-medium hover:text-gray-900 hover:bg-gray-200'
                       }`}
                     >
                       {p}
@@ -649,33 +729,75 @@ function Dashboard() {
                 })}
               </div>
 
-              {/* Year Select 1 */}
-              <div className="relative">
-                <select
-                  value={year1}
-                  onChange={(e) => setYear1(e.target.value)}
-                  className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-xs font-medium text-gray-700 hover:border-gray-300 focus:outline-none cursor-pointer"
-                >
-                  <option value="2024">ปี 2024</option>
-                  <option value="2025">เลือกช่วงปี</option>
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
+              {comparePeriod === 'ปี' ? (
+                <>
+                  {/* Start Year Dropdown */}
+                  <div className="relative w-[100px] sm:w-[105px]">
+                    <select
+                      value={yearRangeStart}
+                      onChange={(e) => setYearRangeStart(e.target.value)}
+                      className="w-full appearance-none bg-[#F1F5F9] hover:bg-[#E2E8F0] border-0 rounded-xl py-2 pl-3.5 pr-7 text-xs font-medium text-gray-700 focus:outline-none cursor-pointer transition-colors truncate"
+                    >
+                      {Object.keys(YEARLY_MOCK_DATA).map((yr) => (
+                        <option key={yr} value={yr}>
+                          ปี {yr}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
 
-              <span className="text-xs text-gray-400">กับ</span>
+                  <span className="text-xs text-gray-400 font-semibold px-0.5">-</span>
 
-              {/* Year Select 2 */}
-              <div className="relative">
-                <select
-                  value={year2}
-                  onChange={(e) => setYear2(e.target.value)}
-                  className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-xs font-medium text-gray-700 hover:border-gray-300 focus:outline-none cursor-pointer"
-                >
-                  <option value="2026">เลือกช่วงปี</option>
-                  <option value="2025">ปี 2025</option>
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
+                  {/* End Year Dropdown */}
+                  <div className="relative w-[100px] sm:w-[105px]">
+                    <select
+                      value={yearRangeEnd}
+                      onChange={(e) => setYearRangeEnd(e.target.value)}
+                      className="w-full appearance-none bg-[#F1F5F9] hover:bg-[#E2E8F0] border-0 rounded-xl py-2 pl-3.5 pr-7 text-xs font-medium text-gray-700 focus:outline-none cursor-pointer transition-colors truncate"
+                    >
+                      {Object.keys(YEARLY_MOCK_DATA).map((yr) => (
+                        <option key={yr} value={yr}>
+                          ปี {yr}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Side 1 Dropdown */}
+                  <div className="relative w-[100px] sm:w-[105px]">
+                    <select
+                      value={side1Selection}
+                      onChange={(e) => setSide1Selection(e.target.value)}
+                      className="w-full appearance-none bg-[#F1F5F9] hover:bg-[#E2E8F0] border-0 rounded-xl py-2 pl-3.5 pr-7 text-xs font-medium text-gray-700 focus:outline-none cursor-pointer transition-colors truncate"
+                    >
+                      <option value="2024">ปี 2024</option>
+                      <option value="2025">ปี 2025</option>
+                      <option value="2026">ปี 2026</option>
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+
+                  <span className="text-xs text-gray-400 font-medium px-0.5">กับ</span>
+
+                  {/* Side 2 Dropdown */}
+                  <div className="relative w-[100px] sm:w-[105px]">
+                    <select
+                      value={side2Selection}
+                      onChange={(e) => setSide2Selection(e.target.value)}
+                      className="w-full appearance-none bg-[#F1F5F9] hover:bg-[#E2E8F0] border-0 rounded-xl py-2 pl-3.5 pr-7 text-xs font-medium text-gray-700 focus:outline-none cursor-pointer transition-colors truncate"
+                    >
+                      <option value="2024">ปี 2024</option>
+                      <option value="2025">ปี 2025</option>
+                      <option value="2026">ปี 2026</option>
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -683,41 +805,49 @@ function Dashboard() {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-8">
               <div>
-                <span className="text-xs font-medium text-gray-400 block mb-1">
-                  ปี {lastYearLabel}
+                <span className="text-xs font-medium text-gray-500 flex items-center gap-1.5 mb-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
+                  {year1Label}
                 </span>
                 <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-                  {lastYearTotal}
+                  ฿{compTotal1.toLocaleString()}
                 </span>
               </div>
               <div>
-                <span className="text-xs font-medium text-blue-500 block mb-1">
-                  ปี {thisYearLabel}
+                <span className="text-xs font-medium text-[#00C49F] flex items-center gap-1.5 mb-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#00C49F]" />
+                  {year2Label}
                 </span>
-                <span className="text-2xl sm:text-3xl font-extrabold text-[#3B82F6] tracking-tight">
-                  {thisYearTotal}
+                <span className="text-2xl sm:text-3xl font-extrabold text-[#00C49F] tracking-tight">
+                  ฿{compTotal2.toLocaleString()}
                 </span>
               </div>
             </div>
 
             {/* Growth Badge */}
-            <div className="bg-[#E8F8F0] border border-[#A7F3D0] rounded-xl px-4 py-2 text-center min-w-[76px]">
-              <span className="text-[11px] font-medium text-emerald-600 block leading-tight">เติบโต</span>
-              <span className="text-sm font-bold text-emerald-600 block leading-tight mt-0.5">{growthRateStr}</span>
+            <div
+              className={`border rounded-xl px-4 py-2 text-center min-w-[76px] ${
+                compGrowthRate >= 0
+                  ? 'bg-[#E8F8F0] border-[#A7F3D0] text-emerald-600'
+                  : 'bg-red-50 border-red-200 text-red-600'
+              }`}
+            >
+              <span className="text-[11px] font-medium block leading-tight">เติบโต</span>
+              <span className="text-sm font-bold block leading-tight mt-0.5">{compGrowthRateStr}</span>
             </div>
           </div>
 
           {/* Area Chart */}
           <div className="h-64 sm:h-72 w-full pt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={yearlyComparisonChart} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <AreaChart data={comparisonChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
-                  {/* Teal/Green Gradient for Top Line (2026) */}
+                  {/* Teal/Green Gradient for Side 2 (e.g. 2026) */}
                   <linearGradient id="compAreaThis" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#00C49F" stopOpacity={0.25} />
                     <stop offset="100%" stopColor="#00C49F" stopOpacity={0.02} />
                   </linearGradient>
-                  {/* Blue Gradient for Bottom Line (2025) */}
+                  {/* Blue Gradient for Side 1 (e.g. 2025) */}
                   <linearGradient id="compAreaLast" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.2} />
                     <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.02} />
@@ -725,7 +855,7 @@ function Dashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F8FAFC" />
                 <XAxis
-                  dataKey="month"
+                  dataKey="label"
                   tick={{ fill: '#94A3B8', fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
@@ -738,32 +868,59 @@ function Dashboard() {
                   tickLine={false}
                 />
                 <Tooltip
-                  formatter={(val: any, name: any) => [
-                    `฿${Number(val || 0).toLocaleString()}`,
-                    name === 'yThis' ? `ปี ${thisYearLabel}` : `ปี ${lastYearLabel}`,
-                  ]}
+                  formatter={(val: any, name: any) => {
+                    if (val === null || val === undefined) return ["-", ""];
+                    const formatted = `฿${Number(val).toLocaleString()}`;
+                    if (comparePeriod === 'ปี') return [formatted, "รายได้รวม"];
+                    return [
+                      formatted,
+                      name === 'y2' ? year2Label : year1Label,
+                    ];
+                  }}
                   contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '12px' }}
                 />
-                {/* 2025 Blue Line */}
-                <Area
-                  type="monotone"
-                  dataKey="yLast"
-                  stroke="#3B82F6"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#compAreaLast)"
-                  dot={false}
-                />
-                {/* 2026 Teal Line */}
-                <Area
-                  type="monotone"
-                  dataKey="yThis"
-                  stroke="#00C49F"
-                  strokeWidth={2.2}
-                  fillOpacity={1}
-                  fill="url(#compAreaThis)"
-                  dot={false}
-                />
+                {comparePeriod === 'ปี' ? (
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    name="รายได้รวม"
+                    stroke="#00C49F"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#compAreaThis)"
+                    dot={{ r: 5, fill: '#00C49F', stroke: '#ffffff', strokeWidth: 2 }}
+                    activeDot={{ r: 7 }}
+                  />
+                ) : (
+                  <>
+                    {/* Year 1 Blue Line */}
+                    <Area
+                      type="monotone"
+                      dataKey="y1"
+                      name={year1Label}
+                      stroke="#3B82F6"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#compAreaLast)"
+                      dot={comparePeriod === 'ไตรมาส' ? { r: 4, fill: '#3B82F6' } : false}
+                      activeDot={{ r: 5 }}
+                      connectNulls={false}
+                    />
+                    {/* Year 2 Teal Line */}
+                    <Area
+                      type="monotone"
+                      dataKey="y2"
+                      name={year2Label}
+                      stroke="#00C49F"
+                      strokeWidth={2.2}
+                      fillOpacity={1}
+                      fill="url(#compAreaThis)"
+                      dot={comparePeriod === 'ไตรมาส' ? { r: 4, fill: '#00C49F' } : false}
+                      activeDot={{ r: 5 }}
+                      connectNulls={false}
+                    />
+                  </>
+                )}
               </AreaChart>
             </ResponsiveContainer>
           </div>
