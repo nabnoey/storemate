@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+// import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import { RouterProvider } from "react-router-dom";
@@ -14,21 +14,21 @@ if (TRACKING_ID) {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <Provider store={store}>
-      <Toaster
-        position="top-center"
-        reverseOrder={false}
-        toastOptions={{
-          // ตั้งค่าให้ toast ธรรมดาหายไปใน 3 วินาที
-          duration: 3000,
-          // ถ้าเป็น error อาจจะให้อยู่นานหน่อย เช่น 5 วินาที
-          error: {
-            duration: 5000,
-          },
-        }}
-      />
-      <RouterProvider router={router} />
-    </Provider>
-  </StrictMode>,
+  // <StrictMode>
+  <Provider store={store}>
+    <Toaster
+      position="top-center"
+      reverseOrder={false}
+      toastOptions={{
+        // ตั้งค่าให้ toast ธรรมดาหายไปใน 3 วินาที
+        duration: 2000,
+        // ถ้าเป็น error อาจจะให้อยู่นานหน่อย เช่น 5 วินาที
+        error: {
+          duration: 2000,
+        },
+      }}
+    />
+    <RouterProvider router={router} />
+  </Provider>,
+  // </StrictMode>,
 );

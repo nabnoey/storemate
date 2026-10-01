@@ -1,16 +1,17 @@
 import React from "react";
 import type { StatusOrderTabsProps } from "../../types/orders";
-import { statusConfig } from "../../utils/order";
+import type { OrderStatus } from "../../types/orders";
+import { statusConfig} from "../../utils/order";
+
 const StatusOrderTabs: React.FC<StatusOrderTabsProps> = ({
   activeTab,
   onTabChange,
 }) => {
-  const tabs = Object.entries(statusConfig).map(([key, value]) => ({
-    //อันนี้สถานะที่ดึงมาจาก backend
-    value: key,
-    //คำอ่านไทย
-    label: value.tab,
-  }));
+const tabs = Object.entries(statusConfig).map(([key, value]) => ({
+  value: key as OrderStatus,
+  label: value.tab,
+}));
+  
 
   return (
     <div className="flex border border-black rounded-sm overflow-hidden mb-6 text-sm text-center overflow-x-auto">

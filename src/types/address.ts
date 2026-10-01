@@ -11,6 +11,8 @@
   isDefault: boolean;
 }
 
+
+
 type DropdownItem = {
   id: number;
   name: string;
@@ -23,6 +25,7 @@ type AddressState = {
   districts: DropdownItem[];
   subdistricts: DropdownItem[];
   zipcodeId: DropdownItem[];
+  loading: boolean;
 };
 
 export type { Address, DropdownItem, AddressState };

@@ -171,6 +171,7 @@ function SidebarAdmin() {
             )}
 
             {isOwner && (
+              
               <li>
                 <button
                   data-test="store-edit-button"

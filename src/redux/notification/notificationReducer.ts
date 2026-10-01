@@ -8,6 +8,8 @@ import type {
   Notification,
   NotificationRequest,
   FetchNotifyParams,
+  NotificationType,
+  ClientNotification,
 } from "../../types/notification";
 
 export const fetchOwnerNotify = createAsyncThunk(
@@ -19,8 +21,8 @@ export const fetchOwnerNotify = createAsyncThunk(
 
 export const fetchUserNotify = createAsyncThunk(
   "notification/fetchUser",
-  async () => {
-    return await NotificationService.getNotifyUser();
+  async (type: NotificationType = "ALL") => {
+    return await NotificationService.getNotifyUser(type);
   },
 );
 
@@ -39,13 +41,43 @@ export const deleteNotify = createAsyncThunk(
   },
 );
 
-export interface ClientNotification extends Notification {
-  isNew?: boolean;
-  isRead?: boolean;
+export const fetchNotificationCounts = createAsyncThunk(
+  "notification/counts",
+  async () => {
+    const data = await NotificationService.getNotifyUser("ALL");
+
+    return data;
+  },
+);
+
+export const markAsReadNotify = createAsyncThunk(
+  "notification/markAsRead",
+  async (notifyId: number) => {
+    await NotificationService.markAsReadNotify(notifyId);
+    return notifyId;
+  },
+);
+
+export const markAllAsReadNotify = createAsyncThunk(
+  "notification/markAllAsRead",
+  async () => {
+    await NotificationService.markAllAsReadNotify();
+    return true;
+  },
+);
+
+interface NotificationCount {
+  ALL: number;
+  ORDERED: number;
+  REFUNDED: number;
+  STORE: number;
 }
 
 interface NotificationState {
   items: ClientNotification[];
+
+  counts: NotificationCount;
+
   isLoading: boolean;
   isSubmitting: boolean;
   totalPages: number;
@@ -54,19 +86,36 @@ interface NotificationState {
 
 const initialState: NotificationState = {
   items: [],
+
+  counts: {
+    ALL: 0,
+    ORDERED: 0,
+    REFUNDED: 0,
+    STORE: 0,
+  },
+
   isLoading: false,
   isSubmitting: false,
   totalPages: 0,
   currentPage: 0,
 };
 
-const getSafeReadIds = (): number[] => {
-  try {
-    return JSON.parse(localStorage.getItem("read_notifications") || "[]");
-  } catch (e) {
-    console.error("Failed to parse read_notifications from localStorage", e);
-    return [];
+const getNotificationType = (
+  title: string,
+  message: string,
+): NotificationType => {
+  const text = `${title} ${message}`;
+
+  if (text.includes("คืนเงิน")) {
+    return "REFUNDED";
   }
+
+  if (text.includes("สถานะคำสั่งซื้อ")) {
+    return "ORDERED";
+  }
+
+  // กรณีไม่รู้จัก ให้ถือเป็น STORE หรือ ORDERED ตามที่ทีมตกลงกัน
+  return "STORE";
 };
 
 const notificationSlice = createSlice({
@@ -76,80 +125,52 @@ const notificationSlice = createSlice({
     // รับข้อมูลจาก WebSocket
     addNotificationFromSocket: (state, action: PayloadAction<Notification>) => {
       const exists = state.items.some((item) => item.id === action.payload.id);
+
       if (!exists) {
-        // ดึงจาก local มาเช็กซ้ำ
-        const readIds = getSafeReadIds();
+        const type = getNotificationType(
+          action.payload.title,
+          action.payload.message,
+        );
+
         state.items.unshift({
           ...action.payload,
-          isNew: true,
-          isRead: readIds.includes(action.payload.id),
+          type,
         });
-      }
-    },
 
-    // กดเปิดกระดิ่งแล้วให้เคลียร์ตัวเลข Badge ทั้งหมดทันที
-    clearUnreadBadge: (state) => {
-      const readIds = getSafeReadIds();
+        state.counts.ALL++;
 
-      state.items = state.items.map((item) => {
-        if (!item.isRead && !readIds.includes(item.id)) {
-          readIds.push(item.id);
+        if (type !== "ALL") {
+          state.counts[type]++;
         }
-        return {
-          ...item,
-          isNew: false,
-          isRead: true, // ปรับเป็นอ่านแล้วเพื่อลดจำนวน unreadCount ใน Navbar
-        };
-      });
-
-      // บันทึกก้อน ID ทั้งหมดกลับลงฐานข้อมูลจำลอง (localStorage)
-      try {
-        localStorage.setItem("read_notifications", JSON.stringify(readIds));
-      } catch (e) {
-        console.error(
-          "Failed to update clearUnreadBadge inside localStorage",
-          e,
-        );
-      }
-    },
-
-    markAsReadInStore: (state, action: PayloadAction<number | string>) => {
-      const targetId = String(action.payload);
-      state.items = state.items.map((item) => {
-        if (String(item.id) === targetId) {
-          return { ...item, isRead: true, isNew: false };
-        }
-        return item;
-      });
-
-      // บันทึกลง LocalStorage
-      try {
-        const readIds = getSafeReadIds().map(String); // แปลงของเก่าในเครื่องเป็น String ให้หมด
-        if (!readIds.includes(targetId)) {
-          readIds.push(targetId);
-          localStorage.setItem("read_notifications", JSON.stringify(readIds));
-        }
-      } catch (e) {
-        console.error("Failed to save read status", e);
       }
     },
   },
 
   extraReducers: (builder) => {
     builder
+
+      .addCase(fetchNotificationCounts.fulfilled, (state, action) => {
+        state.counts.ALL = action.payload.totalUnread;
+
+        state.counts.ORDERED = 0;
+        state.counts.REFUNDED = 0;
+        state.counts.STORE = 0;
+
+        action.payload.unreadByCategory.forEach((item) => {
+          state.counts[item.notifyType] = item.unread;
+        });
+      })
+
       // --- Fetch Owner Notify ---
       .addCase(fetchOwnerNotify.pending, (state) => {
         state.isLoading = true;
       })
       .addCase(fetchOwnerNotify.fulfilled, (state, action) => {
         state.isLoading = false;
-        const readIds = getSafeReadIds();
 
         state.items = (action.payload.content || []).map(
           (item: Notification) => ({
             ...item,
-            isNew: false,
-            isRead: readIds.includes(item.id),
           }),
         );
         state.totalPages = action.payload.totalPages || 0;
@@ -165,14 +186,13 @@ const notificationSlice = createSlice({
       })
       .addCase(fetchUserNotify.fulfilled, (state, action) => {
         state.isLoading = false;
-        const readIds = getSafeReadIds().map(String);
 
-        state.items = (action.payload || []).map((item: Notification) => ({
+        state.items = action.payload.notifyList.map((item) => ({
           ...item,
-          isNew: false,
-          isRead: readIds.includes(String(item.id)),
+          type: getNotificationType(item.title, item.message),
         }));
       })
+
       .addCase(fetchUserNotify.rejected, (state) => {
         state.isLoading = false;
       })
@@ -198,13 +218,34 @@ const notificationSlice = createSlice({
       })
       .addCase(deleteNotify.rejected, (state) => {
         state.isSubmitting = false;
+      })
+
+      // ---markAsReadNotify---
+      .addCase(markAsReadNotify.fulfilled, (state, action) => {
+        const notify = state.items.find((item) => item.id === action.payload);
+
+        if (notify) {
+          notify.read = true;
+        }
+      })
+
+      // ---markAllAsReadNotify---
+      .addCase(markAllAsReadNotify.pending, () => {
+        // state.isLoading = true;
+      })
+      .addCase(markAllAsReadNotify.fulfilled, (state) => {
+        state.items.forEach((item) => {
+          item.read = true;
+        });
+      })
+      .addCase(markAllAsReadNotify.rejected, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(markAsReadNotify.rejected, (state) => {
+        state.isLoading = false;
       });
   },
 });
 
-export const {
-  addNotificationFromSocket,
-  clearUnreadBadge,
-  markAsReadInStore,
-} = notificationSlice.actions;
+export const { addNotificationFromSocket } = notificationSlice.actions;
 export default notificationSlice.reducer;

@@ -1,21 +1,28 @@
 import { useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector,useDispatch } from "react-redux";
+//เพิ่มเพื่อลอง
+import { fetchOrders } from "../../redux/orders/orderReducer";
 import {
   useNavigate,
   useLocation,
   Link,
-  useSearchParams,
-} from "react-router-dom";
+  
+} from "react-router-dom"; //เพิ่มเพื่อลอง เดี๋ยวเติม SearchParams กลับด้วย
 import { Icon } from "@iconify/react";
-import type { RootState } from "../../redux/store";
+//เพิ่มเพื่อลอง เดี๋ยวลบ Appdispatch ด้วย
+import type {AppDispatch, RootState } from "../../redux/store";
 
 const ProfileSidebar = () => {
   const user = useSelector((state: RootState) => state?.auth?.user);
   const navigate = useNavigate();
+  //เพิ่มเพื่อลอง
+  const dispatch = useDispatch<AppDispatch>();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  // const [searchParams] = useSearchParams();
+  //เพิ่มเพื่อลอง
+  const { orders, loading } = useSelector((state: RootState) => state.orders);
 
-  const status: string = searchParams.get("status") || "ALL";
+  // const status: string = searchParams.get("status") || "ALL";
   const [isProfileOpen, setIsProfileOpen] = useState(true);
 
   const isActive = (path: string) => location.pathname === path;
@@ -78,13 +85,26 @@ const ProfileSidebar = () => {
         )}
       </div>
 
-      <Link
+      {/* <Link
         data-test="btn-profile-menu-history"
         to={`/orders?status=${status}`}
         className={getMainMenuClass("/orders")}
       >
         การซื้อของฉัน
-      </Link>
+      </Link> */}
+
+   <Link
+  data-test="btn-profile-menu-history"
+  to="/orders"
+  className={getMainMenuClass("/orders")}
+  onMouseEnter={() => {
+    if (orders.length === 0 && !loading) {
+      dispatch(fetchOrders("ALL"));
+    }
+  }}
+>
+  การซื้อของฉัน
+</Link>
 
       <Link
         data-test="btn-profile-menu-notify"

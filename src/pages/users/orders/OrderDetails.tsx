@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchOrderDetails } from "../../../redux/orders/orderReducer";
 import {
   FiClock,
-  FiClipboard,
   FiTruck,
   FiCheckCircle,
   FiUser,
@@ -12,6 +11,7 @@ import {
   FiMapPin,
   FiArrowLeft,
 } from "react-icons/fi";
+import { LuClipboardList } from "react-icons/lu";
 import { FaHistory } from "react-icons/fa";
 
 import { Users } from "lucide-react";
@@ -19,8 +19,18 @@ import type { RootState, AppDispatch } from "../../../redux/store";
 import { statusConfig, getOrderLabel } from "../../../utils/order";
 import type { PaymentMethod } from "../../../types/payment";
 
+  const formatOrderNo = (orderNo: string) => {
+  const match = orderNo.match(/^ORD-(\d{4})(\d{2})(\d{2})/);
+
+  if (!match) return orderNo;
+
+  const [, year, month, day] = match;
+
+  return `ORD-${year}-${month}-${day}`;
+};
+
 function StatusStep({
-  icon: Icon,
+  icon,
   label,
   isCompleted,
   isCurrent,
@@ -30,24 +40,49 @@ function StatusStep({
   isCompleted: boolean;
   isCurrent: boolean;
 }) {
-  const active = isCompleted || isCurrent;
-
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-          active
-            ? "bg-white border-2 border-blue-500 text-blue-500 shadow-sm"
-            : "bg-white border-2 border-gray-300 text-gray-400"
-        }`}
-      >
-        {Icon}
+    <div className="relative z-10 flex flex-col items-center flex-1 min-w-0">
+      <div className="h-8 min-[401px]:h-10 flex items-center justify-center">
+        <div
+          className={`flex items-center justify-center transition-all duration-300 ${
+            isCurrent
+              ? `
+                w-8 h-8 text-base
+                min-[401px]:w-10 min-[401px]:h-10 min-[401px]:text-xl
+                rounded-full bg-[#3B82F6] text-white
+              `
+              : isCompleted
+                ? `
+                  text-[#3B82F6] text-base
+                  min-[401px]:text-xl
+                  bg-white
+                `
+                : `
+                  text-black text-base
+                  min-[401px]:text-xl
+                  bg-white
+                `
+          }`}
+        >
+          {icon}
+        </div>
       </div>
 
       <span
-        className={`text-xs font-medium text-center ${
-          active ? "font-bold text-blue-500" : "text-gray-400"
-        }`}
+        className="
+          mt-2
+          text-[10px]
+          leading-tight
+          text-black
+          text-center
+          whitespace-normal
+          break-words
+          px-1
+          min-[401px]:mt-3
+          min-[401px]:text-sm
+          md:text-base
+          min-[401px]:whitespace-nowrap
+        "
       >
         {label}
       </span>
@@ -72,16 +107,16 @@ function OrderItemRow({
         <img
           src={image}
           alt={name}
-          className="w-14 h-14 bg-gray-100 rounded-md object-cover"
+          className="w-18 h-18 bg-gray-100 rounded-md object-cover"
         />
         <div>
-          <p className="font-bold text-gray-800 text-sm">{name}</p>
-          <p className="text-xs text-gray-500 mt-1">ราคาต่อหน่วย ฿ {price}</p>
-          <p className="text-xs text-gray-500 mt-1">จำนวน x {quantity}</p>
+          <p className="font-bold text-gray-800 text-sm md:text-[16px]">{name}</p>
+          <p className="text-xs text-gray-500 mt-1 md:text-[16px]">ราคาต่อหน่วย ฿ {price}</p>
+          <p className="text-xs text-gray-500 mt-1 md:text-[16px]">จำนวน x {quantity}</p>
         </div>
       </div>
       <div className="text-right">
-        <p className="font-bold text-blue-500">฿ {price.toLocaleString()}</p>
+        <p className="font-bold text-blue-500 md:text-[20px]">฿ {price.toLocaleString()}</p>
       </div>
     </div>
   );
@@ -120,19 +155,6 @@ function OrderDetails() {
   }
 
   const recipient = order.orderRecipient;
-  const recipientName = recipient?.recipientName || "ไม่ระบุชื่อ";
-  const recipientPhone = recipient?.phone || "ไม่ระบุเบอร์โทรศัพท์";
-
-  const deliveryAddress = recipient
-    ? recipient
-    : {
-        streetAddress:
-          authUser?.address?.streetAddress ?? "ไม่ระบุที่อยู่สำหรับการจัดส่ง",
-        subdistrict: "",
-        district: "",
-        province: "",
-        zipcode: "",
-      };
 
   const orderDate = order.createdAt
     ? new Date(order.createdAt).toLocaleDateString("th-TH")
@@ -140,11 +162,12 @@ function OrderDetails() {
 
   const steps = [
     { icon: <FiClock />, label: "รอดำเนินการ", status: "PENDING" },
-    { icon: <FiClipboard />, label: "ที่ต้องจัดส่ง", status: "PROCESSING" },
+    { icon: <LuClipboardList />, label: "ที่ต้องจัดส่ง", status: "PROCESSING" },
     { icon: <FiTruck />, label: "ที่ต้องได้รับ", status: "RECEIVE" },
     { icon: <FiCheckCircle />, label: "คำสั่งซื้อสำเร็จ", status: "COMPLETED" },
   ];
 
+  //สถานะปัจจุบันอยู่ขั้นตอนที่เท่าไหร่
   const currentStepIndex = steps.findIndex((s) => s.status === order.status);
 
   const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -155,6 +178,9 @@ function OrderDetails() {
 
   // ดึงค่าสีจาก statusConfig
   const statusColor = statusConfig[order?.status]?.color || "text-black";
+
+  const isCancelledOrRefunded =
+    order.status === "CANCELLED" || order.status === "REFUNDED";
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-start text-left w-full mt-0 lg:mt-10">
@@ -168,12 +194,15 @@ function OrderDetails() {
             <FiArrowLeft className="text-xl" />
           </button>
           <div className="flex flex-col md:flex-row w-full md:items-center items-start gap-1 mt-3 md:mt-0">
-            <h1 className="text-xl font-bold text-gray-900 whitespace-nowrap">
+            <h1 className="text-xl md:text-[20px] font-bold text-gray-900 whitespace-nowrap">
               รายละเอียดคำสั่งซื้อ
             </h1>
+
             <div className="text-sm md:ml-auto break-words flex flex-wrap items-center gap-1">
-              <span className="text-gray-500">เลขที่คำสั่งซื้อ: {order.orderNo} |</span>
-              {/* นำ statusColor มาแสดงผลสีข้อความให้ตรงกับ History */}
+              <span className="text-gray-500">
+                เลขที่คำสั่งซื้อ: {formatOrderNo(order.orderNo)} |
+              </span>
+              {/* นำ statusColor มาแสดงผลสีข้อความให้ตรงกับ order */}
               <span className={`font-semibold ${statusColor}`}>
                 {getOrderLabel(order.status, order.checkoutType)}
               </span>
@@ -186,59 +215,74 @@ function OrderDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 flex flex-col gap-6 ">
             {order.status === "CANCELLED" || order.status === "REFUNDED" ? (
-              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
-                {order.status === "CANCELLED" && (
-                  <>
-                    <h2 className="text-red-500 font-bold text-lg mb-2">
-                      คำขอยกเลิกได้รับการยอมรับแล้ว
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      คืนคำสั่งซื้อเมื่อ : {orderDate}
-                    </p>
-                  </>
-                )}
+  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
+    {order.status === "CANCELLED" && (
+      <>
+        <h2 className="text-red-500 font-bold text-lg mb-2">
+          คำขอยกเลิกได้รับการยอมรับแล้ว
+        </h2>
+        <p className="text-sm text-gray-500">
+          คืนคำสั่งซื้อเมื่อ : {orderDate}
+        </p>
+      </>
+    )}
 
-                {order.status === "REFUNDED" && (
-                  <>
-                    <h2 className="text-[#EF4444] font-bold text-lg mb-2">
-                      การคืนเงินสำเร็จ
-                    </h2>
-                    <p className="text-sm text-gray-600 mt-2">
-                      เราได้ทำการคืนเงินจำนวน ฿ {order.total.toLocaleString()}{" "}
-                      ให้คุณแล้ว โอนเงินคืนภายใน 7-14 วันทำการ
-                      ในกรณีที่ชำระผ่านบัตรเครดิต/เดบิต อาจใช้เวลา 15-45
-                      วันทำการ หากคุณยังไม่ได้รับเงินคืนภายในระยะเวลาดังกล่าว
-                      กรุณาติดต่อธนาคารเจ้าของบัตร
-                    </p>
-                  </>
-                )}
-              </div>
-            ) : (
-              <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm relative ">
-                <div className="absolute top-[3rem] left-12 right-12 h-0.5 bg-gray-200 z-0">
-                  <div
-                    className="h-full bg-blue-500 transition-all duration-300"
-                    style={{
-                      width: `${(currentStepIndex / (steps.length - 1)) * 100}%`,
-                    }}
-                  />
-                </div>
-                <div className="flex justify-between items-center relative z-10 ">
-                  {steps.map((step, index) => (
-                    <StatusStep
-                      key={step.status}
-                      icon={step.icon}
-                      label={step.label}
-                      isCompleted={index < currentStepIndex}
-                      isCurrent={index === currentStepIndex}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+    {order.status === "REFUNDED" && (
+      <>
+        <h2 className="text-[#EF4444] font-bold text-lg mb-2">
+          การคืนเงินสำเร็จ
+        </h2>
+        <p className="text-sm text-gray-600 mt-2">
+          เราได้ทำการคืนเงินจำนวน ฿ {order.total.toLocaleString()}{" "}
+          ให้คุณแล้ว โอนเงินคืนภายใน 7-14 วันทำการ
+          ในกรณีที่ชำระผ่านบัตรเครดิต/เดบิต อาจใช้เวลา 15-45
+          วันทำการ หากคุณยังไม่ได้รับเงินคืนภายในระยะเวลาดังกล่าว
+          กรุณาติดต่อธนาคารเจ้าของบัตร
+        </p>
+      </>
+    )}
+  </div>
+) : (
+  <div className="bg-white px-4 md:px-8 py-8 rounded-xl border border-gray-200 shadow-sm">
+    <div className="relative">
+      {/* เส้นสีเทาทั้งเส้น */}
+      <div
+        className="absolute h-[2px] bg-gray-300 z-0"
+        style={{
+          top: "20px",
+          left: "12.5%",
+          right: "12.5%",
+        }}
+      />
+
+      {/* เส้นสีน้ำเงินตามสถานะ */}
+      <div
+        className="absolute h-[2px] bg-[#3B82F6] z-[1] transition-all duration-500"
+        style={{
+          top: "20px",
+          left: "12.5%",
+          width: `${(currentStepIndex / (steps.length - 1)) * 75}%`,
+        }}
+      />
+
+      <div className="relative z-10 flex items-start">
+        {steps.map((step, index) => (
+          <StatusStep
+            key={step.status}
+            icon={step.icon}
+            label={step.label}
+            isCompleted={index < currentStepIndex}
+            isCurrent={index === currentStepIndex}
+          />
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+            
 
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <h3 className="flex items-center gap-2 font-bold text-gray-800 mb-4">
+              <h3 className="flex items-center gap-2 font-bold text-gray-800 mb-4 md:text-[20px]">
                 <div className="text-lg" /> รายการสินค้า (
                 {order.orderItems.length})
               </h3>
@@ -282,22 +326,30 @@ function OrderDetails() {
                 ) : (
                   <>
                     <div className="flex justify-between items-center">
-                      <span className="text-[16px] font-medium text-gray-600">
+                      <span className="text-[14px] md:text-[16px] font-medium text-gray-600">
                         ยอดรวมสุทธิ
                       </span>
                       <div className="text-right">
-                        <p className="text-xl text-blue-500 font-bold">
+                        <p className="text-[16px] md:text-[20px] text-blue-500 font-bold">
                           ฿ {order.total.toLocaleString()}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center border-t border-gray-50 pt-4">
-                      <span className="text-[16px] font-medium text-gray-600">
+                    <div className=" flex
+  justify-between
+  items-center
+  gap-3
+  max-[400px]:border-t-0
+  max-[400px]:pt-0
+  min-[401px]:border-t
+  min-[401px]:border-gray-50
+  min-[401px]:pt-4">
+                      <span className="text-[14px] md:text-[16px] font-medium text-gray-600  whitespace-nowrap">
                         ช่องทางชำระเงิน
                       </span>
                       <div className="text-right">
-                        <p className="text-[16px] font-medium text-gray-900">
+                        <p className="text-[14px] md:text-[16px] font-medium text-gray-900  whitespace-nowrap ml-8">
                           {PAYMENT_METHOD_LABELS[order.checkoutType] ||
                             order.checkoutType}
                         </p>
@@ -333,72 +385,132 @@ function OrderDetails() {
               </div>
             )}
           </div>
+          {!isCancelledOrRefunded && (
+  <div className="lg:col-span-1">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden sticky top-6">
 
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden sticky top-6">
-              <div className="bg-[#3B82F6] text-white px-5 py-3 flex items-center gap-2">
-                <Users className="text-lg" />
-                <h3 className="font-bold text-sm">ข้อมูลผู้รับ</h3>
+      {/* ================= MOBILE 300-400px ================= */}
+      <div className="min-[401px]:hidden">
+        {/* Header */}
+        <div className="bg-[#3B82F6] text-white px-4 py-3 text-center">
+          <h3 className="font-bold text-base">ข้อมูลผู้รับ</h3>
+        </div>
+
+        {/* Content */}
+        <div className="px-4 py-4 text-sm text-gray-700">
+          
+          {/* ชื่อ + เบอร์ */}
+          <div className="flex items-center gap-4 mb-4">
+            <p className="font-bold text-gray-900 whitespace-nowrap">
+              {recipient?.recipientName}
+            </p>
+
+            <p className="text-gray-700 whitespace-nowrap">
+              {recipient?.phone}
+            </p>
+          </div>
+
+          {/* ที่อยู่ */}
+          <div className="pl-3 leading-relaxed text-gray-700">
+            {recipient?.streetAddress}
+
+            {recipient?.subdistrict && (
+              <>
+                {" "}
+                {recipient.subdistrict} {recipient.district}
+              </>
+            )}
+
+            {recipient?.province && (
+              <>
+                {" "}
+                {recipient.province} {recipient.zipcode}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+
+      {/* ================= 401px ขึ้นไป ================= */}
+      <div className="hidden min-[401px]:block">
+        <div className="bg-[#3B82F6] text-white px-5 py-3 flex items-center gap-2">
+          <Users className="text-lg" />
+          <h3 className="font-extralight md:text-[20px] text-sm">ข้อมูลผู้รับ</h3>
+        </div>
+
+        <div className="p-5 flex flex-col gap-5">
+
+          {/* ชื่อ */}
+          <div>
+            <p className="text-xs md:text-[16px] text-gray-500 font-normal mb-2">
+              ชื่อผู้สั่งซื้อ
+            </p>
+
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black">
+                <FiUser />
               </div>
 
-              <div className="p-5 flex flex-col gap-5 ">
-                <div>
-                  <p className="text-xs text-gray-500 font-normal mb-2 block ">
-                    ชื่อผู้สั่งซื้อ
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black">
-                      <FiUser />
-                    </div>
-                    <p className="font-bold text-sm text-gray-900">
-                      {recipientName}
-                    </p>
-                  </div>
-                </div>
+              <p className="font-bold md:text-[14px] text-sm text-gray-900">
+                {recipient?.recipientName}
+              </p>
+            </div>
+          </div>
 
-                <div>
-                  <p className="text-xs text-gray-500 font-normal mb-2 block">
-                    เบอร์โทรศัพท์
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black">
-                      <FiPhone />
-                    </div>
-                    <p className="font-bold text-sm text-gray-900">
-                      {recipientPhone}
-                    </p>
-                  </div>
-                </div>
+          {/* เบอร์โทร */}
+          <div>
+            <p className="text-xs md:text-[16px] text-gray-500 font-normal mb-2">
+              เบอร์โทรศัพท์
+            </p>
 
-                <div>
-                  <p className="text-xs text-gray-500 font-normal mb-2 block justify-between">
-                    ที่อยู่สำหรับการจัดส่ง
-                  </p>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black shrink-0">
-                      <FiMapPin />
-                    </div>
-                    <div className="font-sans text-sm text-black leading-relaxed">
-                      {deliveryAddress.streetAddress}
-                      {deliveryAddress.subdistrict && (
-                        <>
-                          <br />
-                          {deliveryAddress.subdistrict}
-                          {deliveryAddress.district}
-                        </>
-                      )}
-                      {deliveryAddress.province && (
-                        <>
-                          <br />
-                          {deliveryAddress.province} {deliveryAddress.zipcode}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black">
+                <FiPhone />
+              </div>
+
+              <p className="font-bold md:text-[14px] text-sm text-gray-900">
+                {recipient?.phone}
+              </p>
+            </div>
+          </div>
+
+          {/* ที่อยู่ */}
+          <div>
+            <p className="text-xs md:text-[17px] text-gray-500 font-normal mb-2">
+              ที่อยู่สำหรับการจัดส่ง
+            </p>
+
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black shrink-0">
+                <FiMapPin />
+              </div>
+
+              <div className="font-sans md:text-[14px] text-sm text-black leading-relaxed">
+                {recipient?.streetAddress}
+
+                {recipient?.subdistrict && (
+                  <>
+                    <br />
+                    {recipient.subdistrict} {recipient.district}
+                  </>
+                )}
+
+                {recipient?.province && (
+                  <>
+                    <br />
+                    {recipient.province} {recipient.zipcode}
+                  </>
+                )}
               </div>
             </div>
           </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+)}
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import api from "./api";
 import type { User } from "../types/user";
-import type { Address } from "../types/address";
+import type { Address  } from "../types/address";
 
 //ดูหน้าโปรไฟล์ผู้ใช้
 const getProfile = async () => {
@@ -54,7 +54,7 @@ const fetchAllAddresses = async () => {
 };
 
 //เพิ่มที่อยู่ใหม่
-const addAddress = async (data: Partial<Address>) => {
+const addAddress = async (data: Partial<Address> ) => {
   const res = await api.post(
     `${import.meta.env.VITE_USERS_API}/addresses`,
     data,
@@ -70,19 +70,31 @@ const fetchDefaultAddress = async () => {
   return res.data;
 };
 
+
 const addressDropdown = async (
-  provinceId: number, 
-  districtId: number,
-  subdistrictId: number
+  provinceId?: number,
+  districtId?: number,
+  subdistrictId?: number
 ) => {
+  const params: Record<string, number> = {};
+
+  if (provinceId) {
+    params.provinceId = provinceId;
+  }
+
+  if (districtId) {
+    params.districtId = districtId;
+  }
+
+  if (subdistrictId) {
+    params.subdistrictId = subdistrictId;
+  }
+
   const res = await api.get(
-    `${import.meta.env.VITE_USERS_API}/address-dropdown`, {
-      params: {
-        provinceId: provinceId || null, 
-        districtId: districtId || null,
-        subdistrictId: subdistrictId || null
-      }
-    });
+    `${import.meta.env.VITE_USERS_API}/address-dropdown`,
+    { params }
+  );
+
   return res.data;
 };
 

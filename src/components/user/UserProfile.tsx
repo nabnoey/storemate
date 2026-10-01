@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
 import { Icon } from "@iconify/react";
 import { logout } from "../../redux/auth/authReducer";
 import type { AppDispatch, RootState } from "../../redux/store";
@@ -21,6 +22,7 @@ const UserProfile: React.FC<Readonly<UserProfileProps>> = ({
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [openProfile, setOpenProfile] = useState(false);
 
   const roles = user?.roles ?? [];
   //เพิ่มเพื่อลอง
@@ -31,9 +33,13 @@ const UserProfile: React.FC<Readonly<UserProfileProps>> = ({
 
   const canAccessBackoffice = isAdmin || isModerator;
 
+
   const handleAdminNavigation = () => {
+
+    
     closeMenu();
 
+    
     if (isAdmin) {
       navigate("/dashboard");
       return;
@@ -46,15 +52,21 @@ const UserProfile: React.FC<Readonly<UserProfileProps>> = ({
   };
 
   const isActive = (path: string) => location.pathname === path;
+
+
   const closeMenu = () => {
-    const elem = document.activeElement as HTMLElement;
-    if (elem) {
-      elem.blur();
-    }
-    if (onCloseMenu) {
-      onCloseMenu();
-    }
-  };
+  setOpenProfile(false);
+
+  const elem = document.activeElement as HTMLElement;
+
+  if (elem) {
+    elem.blur();
+  }
+
+  if (onCloseMenu) {
+    onCloseMenu();
+  }
+};
 
   const handleNavigation = (path: string) => {
     closeMenu();
@@ -180,6 +192,7 @@ const UserProfile: React.FC<Readonly<UserProfileProps>> = ({
         data-test="btn-user-profile"
         type="button"
         className="cursor-pointer outline-none"
+        onClick={() => setOpenProfile(!openProfile)}
       >
         <div className="cursor-pointer w-11 h-11 rounded-full overflow-hidden bg-gray-50 text-gray-500 flex items-center justify-center border border-gray-100 shadow-sm hover:bg-gray-100 transition-all">
           {user?.image_url || user?.image ? (

@@ -6,7 +6,7 @@ import padthongLogo from "../assets/navbar_padthong.jpg";
 
 const AboutUs = () => {
   return (
-    <main className="w-full min-h-screen bg-white flex flex-col font-anuphan">
+    <main className="w-full min-h-screen bg-white flex flex-col font-anuphan overflow-x-hidden">
       <section className="w-full bg-[#fbf9f4] pt-9 pb-10 md:pt-20 md:pb-21 overflow-hidden">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -78,7 +78,7 @@ const AboutUs = () => {
             <span className="text-gray-900 font-medium">เกี่ยวกับเรา</span>
           </div>
 
-          <h2 className="font-['Anuphan'] font-semibold text-[16px] text-[#0F0202] leading-[24px] text-center w-full mb-6 block md:hidden ml-10">
+          <h2 className="font-['Anuphan'] font-semibold text-[16px] text-[#0F0202] leading-[24px] text-center w-full mb-6 block md:hidden">
             ก้าวใหม่สู่ความยั่งยืน
             <br />
             พลังจากสมุนไพรไทย

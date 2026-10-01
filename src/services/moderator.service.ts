@@ -51,7 +51,7 @@ const shippingOrder = async (Ids: number[]) => {
 };
 
 
-const getoOrderByOrderNo = async (orderNo: string) => {
+const getOrderByOrderNo = async (orderNo: string) => {
   const res = await api.get(
     `${import.meta.env.VITE_MOD_API}/orders/${orderNo}`,
   );
@@ -100,7 +100,7 @@ export const ModeratorService = {
   deleteProduct,
   shippingOrder,
   addProduct,
-  getoOrderByOrderNo,
+  getOrderByOrderNo,
   changeStatus,
   getRefunds,
   rejectRefund,
