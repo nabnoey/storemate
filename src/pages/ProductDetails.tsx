@@ -217,7 +217,7 @@ const ProductDetailPage: React.FC = () => {
     }
 
     if (buyQuantity > currentStock) {
-      setIsProcessing(true);
+      setIsProcessing(false);
       toast.error(
         `จำนวนสินค้าในสต็อกไม่เพียงพอ (คงเหลือ ${currentStock} ชิ้น)`,
       );
@@ -452,9 +452,7 @@ const ProductDetailPage: React.FC = () => {
                         type="button"
                         data-test="btn-decrease"
                         disabled={
-                          isUnavailable ||
-                          isProcessing ||
-                          buyQuantity >= currentStock
+                          isUnavailable || isProcessing || buyQuantity >= 1
                         }
                         onClick={handleDecrease}
                         className="flex-1 h-full flex items-center justify-center cursor-pointer text-lg font-medium text-black transition-colors"
