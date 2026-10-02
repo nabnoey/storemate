@@ -451,9 +451,7 @@ const ProductDetailPage: React.FC = () => {
                       <button
                         type="button"
                         data-test="btn-decrease"
-                        disabled={
-                          isUnavailable || isProcessing || buyQuantity >= 1
-                        }
+                        disabled={buyQuantity <= 1}
                         onClick={handleDecrease}
                         className="flex-1 h-full flex items-center justify-center cursor-pointer text-lg font-medium text-black transition-colors"
                       >
