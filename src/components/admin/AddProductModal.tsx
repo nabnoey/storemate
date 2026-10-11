@@ -662,7 +662,7 @@ newImages.forEach((img) => {
                     }
                     className="px-8 py-2 bg-[#1e3a8a] hover:bg-blue-800 text-white rounded-md font-medium transition-colors disabled:bg-gray-400 cursor-pointer"
                   >
-                    {isEditMode ? "บันทึก" : ""}
+                   บันทึก
                   </button>
                   <button
                     type="button"
