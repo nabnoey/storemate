@@ -209,13 +209,13 @@ const handleConfirmPrint = async () => {
                     className="h-[40px] px-4 bg-blue-600 cursor-pointer hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                   >
                     <span>🖨️</span>
-                    ปริ้นใบปะหน้า
+                    ปรินท์ใบปะหน้า
                   </button>
                 ) : (
                   <>
                     <div className="h-[40px] cursor-pointer px-4 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center gap-2">
                       <span>🖨️</span>
-                      ปริ้นใบปะหน้าที่เลือก ({selectedOrders.length})
+                      ปรินท์ใบปะหน้าที่เลือก ({selectedOrders.length})
                     </div>
                     <button
                       type="button"

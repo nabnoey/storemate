@@ -10,6 +10,7 @@ import {
 } from "../../redux/moderator/ModeratorReducer";
 import {fetchProductById,fetchProducts} from "../../redux/products/productReducer"
 import type {  AddProductModalProps,ProductFormValues} from "../../types/moderator/productMod";
+import { STATUS_CONFIG } from "../../types/moderator/productMod";
 import type { Product, ProductImage } from "../../types/product";
 import { toast } from "react-hot-toast";
 
@@ -487,8 +488,12 @@ newImages.forEach((img) => {
                     name="status"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
                   >
-                    <option value="ACTIVE">พร้อมจำหน่าย</option>
-                    <option value="INACTIVE">ไม่พร้อมจำหน่าย</option>
+                    {/* <option value="ACTIVE">พร้อมจำหน่าย</option>
+                    <option value="INACTIVE">ไม่พร้อมจำหน่าย</option> */}
+
+                    <option value="ACTIVE">{STATUS_CONFIG.ACTIVE.label}</option>
+  <option value="INACTIVE">{STATUS_CONFIG.INACTIVE.label}</option>
+  
                   </Field>
                   <ErrorMessage
                     name="status"
@@ -657,7 +662,7 @@ newImages.forEach((img) => {
                     }
                     className="px-8 py-2 bg-[#1e3a8a] hover:bg-blue-800 text-white rounded-md font-medium transition-colors disabled:bg-gray-400 cursor-pointer"
                   >
-                    {isEditMode ? "แก้ไขสินค้า" : "บันทึก"}
+                    {isEditMode ? "บันทึก" : ""}
                   </button>
                   <button
                     type="button"
