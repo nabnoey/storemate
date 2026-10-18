@@ -73,6 +73,7 @@ export interface YearActiveIncomeChart {
   growthRate: number;
   thisYear: YearIncomeData;
   lastYear: YearIncomeData;
+  years?: YearIncomeData[];
 }
 
 export interface WeeklyIncomeGraph {
@@ -144,3 +145,12 @@ export interface DashboardResponse {
   reviews?: ReviewItem[];
   productAlert?: ProductAlertItem[];
 }
+
+export interface GetDashboardParams {
+  salesPeriod?: 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR' | string;
+  salesDate?: string;
+  comparePeriod?: 'MONTH' | 'QUARTER' | 'YEAR' | string;
+  compareFromYear?: number;
+  compareToYear?: number;
+}
+

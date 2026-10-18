@@ -21,7 +21,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../redux/store';
 import { getOwnerDashboard } from '../../redux/owner/ownerReducer';
 import { AddProductModal } from "../../components/admin/AddProductModal";
-import type { DashboardResponse } from '../../types/owner';
+import type { DashboardResponse, GetDashboardParams } from '../../types/owner';
 
 // Fallback product assets
 import soapImg from '../../assets/soap.jpg';
@@ -49,48 +49,21 @@ const formatMoneyCompact = (val: number | undefined | null, fallback = "฿ 0") 
 
 // Shorten region names for axis display
 const shortenRegionName = (name: string) => {
-  if (name.includes("กรุงเทพ")) return "กรุงเทพฯ";
-  if (name.includes("ตะวันออกเฉียงเหนือ")) return "ภาคอีสาน";
+  if (name.includes("กรุงเทพ")) return "กรุงเทพฯและปริมณฑล";
+  if (name.includes("ตะวันออกเฉียงเหนือ")) return "ภาคตะวันออกเฉียงเหนือ";
   return name;
 };
 
-// Shorten product names cleanly to avoid crowded table columns (around 25 characters)
-const formatShortProductName = (name: string, maxLen = 25) => {
-  if (!name) return "";
-  const trimmed = name.trim();
-  if (trimmed.length <= maxLen) return trimmed;
-  return `${trimmed.slice(0, maxLen).trim()}...`;
-};
 
 // =========================================================================
-// MOCKUP DATA FOR INCOME COMPARISON (เปรียบเทียบรายได้)
+// INCOME COMPARISON LABELS & CONSTANTS
 // =========================================================================
 const MONTH_NAMES = [
   "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
   "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
 ];
 
-const MONTHLY_MOCK_DATA: Record<string, number[]> = {
-  "2024": [60000, 75000, 70000, 90000, 120000, 100000, 145000, 120000, 180000, 150000, 200000, 210000],
-  "2025": [85000, 110000, 95000, 130000, 180000, 145000, 210000, 175000, 260000, 220000, 290000, 320000],
-  "2026": [105000, 125000, 140000, 160000, 220000, 190000, 250000, 230000, 480000, 300000, 350000, 390000],
-};
-
-const QUARTERLY_MOCK_DATA: Record<string, number[]> = {
-  "2024": [205000, 310000, 445000, 560000],
-  "2025": [290000, 455000, 645000, 830000],
-  "2026": [370000, 570000, 960000, 1040000],
-};
-
-const YEARLY_MOCK_DATA: Record<string, number> = {
-  "2020": 980000,
-  "2021": 1150000,
-  "2022": 1320000,
-  "2023": 1480000,
-  "2024": 1520000,
-  "2025": 2220000,
-  "2026": 2940000,
-};
+const AVAILABLE_YEARS = ['2020', '2021', '2022', '2023', '2024', '2025', '2026'];
 
 function Dashboard() {
   const dispatch = useDispatch<AppDispatch>();
@@ -106,6 +79,50 @@ function Dashboard() {
   const [side2Selection, setSide2Selection] = useState('2026');
   const [yearRangeStart, setYearRangeStart] = useState('2020');
   const [yearRangeEnd, setYearRangeEnd] = useState('2026');
+
+  // Dynamic period text based on selected filter date (e.g. เดือนนี้, สัปดาห์นี้, ไตรมาสนี้, ปีนี้)
+  const periodText = useMemo(() => {
+    switch (selectedPeriod) {
+      case 'สัปดาห์':
+        return 'สัปดาห์นี้';
+      case 'เดือน':
+        return 'เดือนนี้';
+      case 'ไตรมาส':
+        return 'ไตรมาสนี้';
+      case 'ปี':
+        return 'ปีนี้';
+      default:
+        return 'เดือนนี้';
+    }
+  }, [selectedPeriod]);
+
+  // Build API Query Parameters
+  const queryParams = useMemo<GetDashboardParams>(() => {
+    // Backend salesPeriod supports: DAY, MONTH, YEAR
+    const sPeriodMap: Record<string, 'DAY' | 'MONTH' | 'YEAR'> = {
+      'สัปดาห์': 'MONTH',
+      'เดือน': 'MONTH',
+      'ไตรมาส': 'YEAR',
+      'ปี': 'YEAR',
+    };
+
+    // Backend comparePeriod supports: MONTH, QUARTER, YEAR
+    const cPeriodMap: Record<string, 'MONTH' | 'QUARTER' | 'YEAR'> = {
+      'เดือน': 'MONTH',
+      'ไตรมาส': 'QUARTER',
+      'ปี': 'YEAR',
+    };
+
+    const fromYear = comparePeriod === 'ปี' ? parseInt(yearRangeStart) : parseInt(side1Selection);
+    const toYear = comparePeriod === 'ปี' ? parseInt(yearRangeEnd) : parseInt(side2Selection);
+
+    return {
+      salesPeriod: sPeriodMap[selectedPeriod] || 'YEAR',
+      comparePeriod: cPeriodMap[comparePeriod] || 'MONTH',
+      ...(isNaN(fromYear) ? {} : { compareFromYear: fromYear }),
+      ...(isNaN(toYear) ? {} : { compareToYear: toYear }),
+    };
+  }, [selectedPeriod, comparePeriod, side1Selection, side2Selection, yearRangeStart, yearRangeEnd]);
 
   // Edit Product Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -123,10 +140,13 @@ function Dashboard() {
 
   useEffect(() => {
     ReactGA.send({ hitType: "pageview", page: window.location.pathname, title: "Admin Dashboard" });
-    dispatch(getOwnerDashboard()).unwrap().catch((err) => {
+  }, []);
+
+  useEffect(() => {
+    dispatch(getOwnerDashboard(queryParams)).unwrap().catch((err) => {
       console.warn("Failed to fetch dashboard data:", err);
     });
-  }, [dispatch]);
+  }, [dispatch, queryParams]);
 
 
   // =========================================================================
@@ -134,7 +154,7 @@ function Dashboard() {
   // =========================================================================
   const totalRevenueDisplay = rawDashData?.totalRevenue !== undefined
     ? formatMoneyFull(rawDashData.totalRevenue)
-    : "฿ 1,017,060";
+    : "฿ 2,920,000";
 
   const totalOrdersDisplay = rawDashData?.totalOrder !== undefined
     ? rawDashData.totalOrder.toLocaleString()
@@ -151,7 +171,7 @@ function Dashboard() {
   const currentYearDisplay = rawDashData?.yearActiveIncomeChart?.thisYear?.year || "2026";
 
   // =========================================================================
-  // 2. เปรียบเทียบรายได้ (Income Comparison) [Mockup Data]
+  // 2. เปรียบเทียบรายได้ (Income Comparison) [ข้อมูลจริงจาก API]
   // =========================================================================
   const {
     comparisonChartData,
@@ -163,6 +183,7 @@ function Dashboard() {
     year1Label,
     year2Label,
   } = useMemo(() => {
+    const apiIncomeChart = rawDashData?.yearActiveIncomeChart;
     const year1 = side1Selection;
     const year2 = side2Selection;
 
@@ -175,15 +196,26 @@ function Dashboard() {
     const label2 = `ปี ${year2}`;
 
     if (comparePeriod === 'เดือน') {
-      const data1 = MONTHLY_MOCK_DATA[year1] || MONTHLY_MOCK_DATA["2025"];
-      const data2 = MONTHLY_MOCK_DATA[year2] || MONTHLY_MOCK_DATA["2026"];
+      const data1 = apiIncomeChart?.years?.find((y) => String(y.year) === String(year1))
+        || (String(apiIncomeChart?.thisYear?.year) === String(year1)
+            ? apiIncomeChart?.thisYear
+            : String(apiIncomeChart?.lastYear?.year) === String(year1)
+            ? apiIncomeChart?.lastYear
+            : undefined);
 
-      t1 = data1.reduce((acc, curr) => acc + curr, 0);
-      t2 = data2.reduce((acc, curr) => acc + curr, 0);
+      const data2 = apiIncomeChart?.years?.find((y) => String(y.year) === String(year2))
+        || (String(apiIncomeChart?.thisYear?.year) === String(year2)
+            ? apiIncomeChart?.thisYear
+            : String(apiIncomeChart?.lastYear?.year) === String(year2)
+            ? apiIncomeChart?.lastYear
+            : undefined);
+
+      t1 = data1?.totalIncome ?? 0;
+      t2 = data2?.totalIncome ?? 0;
 
       chartData = MONTH_NAMES.map((m, idx) => {
-        const val1 = data1[idx];
-        const val2 = data2[idx];
+        const val1 = data1?.graph?.[idx]?.totalMonthlyIncome ?? 0;
+        const val2 = data2?.graph?.[idx]?.totalMonthlyIncome ?? 0;
         if (val1 > maxVal) maxVal = val1;
         if (val2 > maxVal) maxVal = val2;
         return {
@@ -193,16 +225,27 @@ function Dashboard() {
         };
       });
     } else if (comparePeriod === 'ไตรมาส') {
-      const data1 = QUARTERLY_MOCK_DATA[year1] || QUARTERLY_MOCK_DATA["2025"];
-      const data2 = QUARTERLY_MOCK_DATA[year2] || QUARTERLY_MOCK_DATA["2026"];
+      const data1 = apiIncomeChart?.years?.find((y) => String(y.year) === String(year1))
+        || (String(apiIncomeChart?.thisYear?.year) === String(year1)
+            ? apiIncomeChart?.thisYear
+            : String(apiIncomeChart?.lastYear?.year) === String(year1)
+            ? apiIncomeChart?.lastYear
+            : undefined);
 
-      t1 = data1.reduce((acc, curr) => acc + curr, 0);
-      t2 = data2.reduce((acc, curr) => acc + curr, 0);
+      const data2 = apiIncomeChart?.years?.find((y) => String(y.year) === String(year2))
+        || (String(apiIncomeChart?.thisYear?.year) === String(year2)
+            ? apiIncomeChart?.thisYear
+            : String(apiIncomeChart?.lastYear?.year) === String(year2)
+            ? apiIncomeChart?.lastYear
+            : undefined);
+
+      t1 = data1?.totalIncome ?? 0;
+      t2 = data2?.totalIncome ?? 0;
 
       const quarterLabels = ["Q1", "Q2", "Q3", "Q4"];
       chartData = quarterLabels.map((q, idx) => {
-        const val1 = data1[idx];
-        const val2 = data2[idx];
+        const val1 = data1?.graph?.[idx]?.totalMonthlyIncome ?? 0;
+        const val2 = data2?.graph?.[idx]?.totalMonthlyIncome ?? 0;
         if (val1 > maxVal) maxVal = val1;
         if (val2 > maxVal) maxVal = val2;
         return {
@@ -212,22 +255,21 @@ function Dashboard() {
         };
       });
     } else {
-      // comparePeriod === 'ปี' (Range เช่น 2020 - 2026)
+      // comparePeriod === 'ปี'
       const sYr = parseInt(yearRangeStart) || 2020;
       const eYr = parseInt(yearRangeEnd) || 2026;
       const minYr = Math.min(sYr, eYr);
       const maxYr = Math.max(sYr, eYr);
 
-      t1 = YEARLY_MOCK_DATA[String(minYr)] || 0;
-      t2 = YEARLY_MOCK_DATA[String(maxYr)] || 0;
-
+      const yearsList = apiIncomeChart?.years || [];
       const yearKeys: string[] = [];
       for (let y = minYr; y <= maxYr; y++) {
         yearKeys.push(String(y));
       }
 
       chartData = yearKeys.map((yr) => {
-        const rev = YEARLY_MOCK_DATA[yr] || 0;
+        const match = yearsList.find((item) => String(item.year) === yr);
+        const rev = match?.totalIncome ?? 0;
         if (rev > maxVal) maxVal = rev;
         return {
           label: `ปี ${yr}`,
@@ -235,9 +277,16 @@ function Dashboard() {
         };
       });
 
-      const growth = t1 > 0 ? ((t2 - t1) / t1) * 100 : t2 > 0 ? 100 : 0;
-      const growthStr = `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`;
-      const yMax = maxVal > 0 ? Math.ceil((maxVal * 1.15) / 500000) * 500000 : 500000;
+      const firstMatch = yearsList.find((item) => String(item.year) === String(minYr));
+      const lastMatch = yearsList.find((item) => String(item.year) === String(maxYr));
+      t1 = firstMatch?.totalIncome ?? 0;
+      t2 = lastMatch?.totalIncome ?? 0;
+
+      const growth = apiIncomeChart?.growthRate !== undefined
+        ? apiIncomeChart.growthRate
+        : (t1 > 0 ? ((t2 - t1) / t1) * 100 : (t2 > 0 ? 100 : 0));
+      const growthStr = `${growth >= 0 ? '+' : ''}${Number(growth).toFixed(1)}%`;
+      const yMax = maxVal > 0 ? Math.ceil((maxVal * 1.2) / 1000) * 1000 : 10000;
 
       return {
         comparisonChartData: chartData,
@@ -251,9 +300,11 @@ function Dashboard() {
       };
     }
 
-    const growth = t1 > 0 ? ((t2 - t1) / t1) * 100 : t2 > 0 ? 100 : 0;
-    const growthStr = `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`;
-    const yMax = maxVal > 0 ? Math.ceil((maxVal * 1.15) / 50000) * 50000 : 500000;
+    const growth = apiIncomeChart?.growthRate !== undefined
+      ? apiIncomeChart.growthRate
+      : (t1 > 0 ? ((t2 - t1) / t1) * 100 : (t2 > 0 ? 100 : 0));
+    const growthStr = `${growth >= 0 ? '+' : ''}${Number(growth).toFixed(1)}%`;
+    const yMax = maxVal > 0 ? Math.ceil((maxVal * 1.2) / 1000) * 1000 : 10000;
 
     return {
       comparisonChartData: chartData,
@@ -265,7 +316,7 @@ function Dashboard() {
       year1Label: label1,
       year2Label: label2,
     };
-  }, [comparePeriod, side1Selection, side2Selection, yearRangeStart, yearRangeEnd]);
+  }, [comparePeriod, side1Selection, side2Selection, yearRangeStart, yearRangeEnd, rawDashData]);
 
   // =========================================================================
   // 3. สินค้าขายดี (Top Products) [จริง: ชื่อ, รูปภาพ, สัดส่วน / คำนวณ: ยอดขาย, รายได้, ราคา / Mockup: คะแนนรีวิว]
@@ -305,7 +356,7 @@ function Dashboard() {
         return {
           id: sp.id || idx + 1,
           name: sp.name,
-          displayName: formatShortProductName(sp.name, 25),
+          displayName: sp.name,
           categoryBadge,
           badgeColor,
           price: calculatedPrice,
@@ -317,43 +368,43 @@ function Dashboard() {
       });
     }
 
-    // Default Fallback
+    // Default Fallback matching UI
     return [
       {
-        id: 26,
-        name: "สบู่มะม่วงหาว มะนาวโห่ ลดฝ้า กระ สิวที่หลัง ลดกลิ่นกายได้ดีมาก ผดผื่นคัน",
-        displayName: formatShortProductName("สบู่มะม่วงหาว มะนาวโห่ ลดฝ้า กระ สิวที่หลัง ลดกลิ่นกายได้ดีมาก ผดผื่นคัน", 25),
-        categoryBadge: "สบู่",
-        badgeColor: "bg-blue-50 text-blue-600 border-blue-200",
-        price: 242,
-        soldCount: 3449,
-        revenueDisplay: "฿ 834.5K",
-        rating: 4.9,
-        image: "https://pccaovffcqixakzwjjge.supabase.co/storage/v1/object/products/1783764252056_____2.png",
-      },
-      {
-        id: 30,
-        name: "น้ำมะม่วงหาวมะนาวโห่สกัดเข้มข้น ไม่มีน้ำตาล สกัดจากผลที่แก่จัด วิตามินซีสูงมาก",
-        displayName: formatShortProductName("น้ำมะม่วงหาวมะนาวโห่สกัดเข้มข้น ไม่มีน้ำตาล สกัดจากผลที่แก่จัด วิตามินซีสูงมาก", 25),
+        id: 1,
+        name: "น้ำมะม่วงหาวมะนาวโห่ ตรา พัดทอง 50 ขวด (สั่งไม่เกิน 1 ออเดอร์เท่านั้น)",
+        displayName: "น้ำมะม่วงหาวมะนาวโห่ ตรา พัดทอง 50 ขวด (สั่งไม่เกิน 1 ออเดอร์เท่านั้น)",
         categoryBadge: "เครื่องดื่ม",
         badgeColor: "bg-purple-50 text-purple-600 border-purple-200",
-        price: 242,
-        soldCount: 364,
-        revenueDisplay: "฿ 88.0K",
+        price: 3000,
+        soldCount: 1284,
+        revenueDisplay: "฿ 3.3M",
+        rating: 4.9,
+        image: drinkImg,
+      },
+      {
+        id: 2,
+        name: "มะม่วงหาวมะนาวโห่ สกัดจากผลสด100% ,150ml มีวิตามินซีสูงผิวสวย สารต้านอนุมูลอิสระป้องกันการเกิดริ้วร้อยก่อนวัย",
+        displayName: "มะม่วงหาวมะนาวโห่ สกัดจากผลสด100% ,150ml มีวิตามินซีสูงผิวสวย สารต้านอนุมูลอิสระป้องกันการเกิดริ้วร้อยก่อนวัย",
+        categoryBadge: "โปรโมชั่น",
+        badgeColor: "bg-purple-50 text-purple-600 border-purple-200",
+        price: 3000,
+        soldCount: 988,
+        revenueDisplay: "฿ 3.0M",
         rating: 4.8,
         image: "https://pccaovffcqixakzwjjge.supabase.co/storage/v1/object/products/1773759784192_1.webp",
       },
       {
-        id: 25,
-        name: "ยาสระผมสมุนไพรมะม่วงหาว มะนาวโห่ ตรา พัดทอง",
-        displayName: formatShortProductName("ยาสระผมสมุนไพรมะม่วงหาว มะนาวโห่ ตรา พัดทอง", 25),
-        categoryBadge: "แชมพู",
-        badgeColor: "bg-cyan-50 text-cyan-600 border-cyan-200",
-        price: 242,
-        soldCount: 213,
-        revenueDisplay: "฿ 51.5K",
+        id: 3,
+        name: "น้ำมะม่วงหาวมะนาว สูตรผสมคอลลาเจน",
+        displayName: "น้ำมะม่วงหาวมะนาว สูตรผสมคอลลาเจน",
+        categoryBadge: "เครื่องดื่ม",
+        badgeColor: "bg-purple-50 text-purple-600 border-purple-200",
+        price: 3500,
+        soldCount: 754,
+        revenueDisplay: "฿ 2.6M",
         rating: 4.9,
-        image: "https://pccaovffcqixakzwjjge.supabase.co/storage/v1/object/products/1773757120028_th-11134207-7qul4-lj14mj2t5bwxb9.webp",
+        image: drinkImg,
       },
     ];
   }, [rawDashData]);
@@ -362,17 +413,20 @@ function Dashboard() {
   // 4. ช่องทางการขาย (Sales Channels) [จริง: สัดส่วน % / คำนวณ: ยอดเงินจาก totalRevenue]
   // =========================================================================
   const salesChannelData = useMemo(() => {
-    const totalRev = rawDashData?.totalRevenue || 1017060;
+    const totalRev = rawDashData?.totalRevenue || 2920000;
 
     if (rawDashData?.orderChannelRete && rawDashData.orderChannelRete.length > 0) {
       return rawDashData.orderChannelRete.map((c) => {
         const channelUpper = (c.orderChannel || "").toUpperCase();
-        let name = "เว็บไซต์";
+        let name = "Website";
         let color = "#2563EB";
 
         if (channelUpper.includes("LINE")) {
           name = "LINE OA";
           color = "#10B981";
+        } else if (channelUpper.includes("WEB")) {
+          name = "Website";
+          color = "#2563EB";
         } else if (channelUpper.includes("OTHER")) {
           name = "อื่นๆ / หน้าร้าน";
           color = "#6366F1";
@@ -391,9 +445,8 @@ function Dashboard() {
     }
 
     return [
-      { name: "อื่นๆ / หน้าร้าน", amount: 884842, value: 87, color: "#6366F1" },
-      { name: "Website", amount: 122047, value: 12, color: "#2563EB" },
-      { name: "LINE OA", amount: 0, value: 0, color: "#10B981" },
+      { name: "Website", amount: 2190000, value: 75, color: "#2563EB" },
+      { name: "LINE OA", amount: 730000, value: 25, color: "#10B981" },
     ];
   }, [rawDashData]);
 
@@ -401,11 +454,12 @@ function Dashboard() {
   // 5. สัดส่วนหมวดหมู่ (Category Distribution) [จริง: จัดกลุ่มจาก salesPercentage / คำนวณ: ยอดเงิน]
   // =========================================================================
   const categoryRatioData = useMemo(() => {
-    const totalRev = rawDashData?.totalRevenue || 1017060;
+    const totalRev = rawDashData?.totalRevenue || 2920000;
 
     if (rawDashData?.salesPercentage && rawDashData.salesPercentage.length >= 3) {
       let soapPct = 0;
       let drinkPct = 0;
+      let promoPct = 0;
       let shampooPct = 0;
       let otherPct = 0;
 
@@ -413,6 +467,8 @@ function Dashboard() {
         const val = Number(item.avg || 0);
         if (item.name.includes("สบู่")) {
           soapPct += val;
+        } else if (item.name.includes("โปรโมชั่น")) {
+          promoPct += val;
         } else if (item.name.includes("น้ำ") || item.name.includes("เครื่องดื่ม") || item.name.includes("กระเช้า")) {
           drinkPct += val;
         } else if (item.name.includes("ยาสระผม") || item.name.includes("แชมพู")) {
@@ -422,39 +478,48 @@ function Dashboard() {
         }
       });
 
-      return [
-        {
-          name: "สบู่",
-          amount: Math.round((totalRev * soapPct) / 100),
-          value: Number(soapPct.toFixed(1)),
-          color: "#6366F1",
-        },
+      const list = [
         {
           name: "เครื่องดื่ม",
           amount: Math.round((totalRev * drinkPct) / 100),
           value: Number(drinkPct.toFixed(1)),
+          color: "#4F46E5",
+        },
+        {
+          name: "สบู่",
+          amount: Math.round((totalRev * soapPct) / 100),
+          value: Number(soapPct.toFixed(1)),
           color: "#F59E0B",
+        },
+        {
+          name: "โปรโมชั่น",
+          amount: Math.round((totalRev * promoPct) / 100),
+          value: Number(promoPct.toFixed(1)),
+          color: "#10B981",
         },
         {
           name: "แชมพู",
           amount: Math.round((totalRev * shampooPct) / 100),
           value: Number(shampooPct.toFixed(1)),
-          color: "#10B981",
+          color: "#8B5CF6",
         },
-        {
-          name: "สกัดแปรรูป",
+      ];
+      if (otherPct > 0) {
+        list.push({
+          name: "อื่นๆ",
           amount: Math.round((totalRev * otherPct) / 100),
           value: Number(otherPct.toFixed(1)),
           color: "#06B6D4",
-        },
-      ];
+        });
+      }
+      return list.filter((x) => x.value > 0);
     }
 
     return [
-      { name: "สบู่", amount: 835006, value: 82.1, color: "#6366F1" },
-      { name: "เครื่องดื่ม", amount: 88484, value: 8.7, color: "#F59E0B" },
-      { name: "แชมพู", amount: 51870, value: 5.1, color: "#10B981" },
-      { name: "สกัดแปรรูป", amount: 41700, value: 4.1, color: "#06B6D4" },
+      { name: "เครื่องดื่ม", amount: 1168000, value: 40, color: "#4F46E5" },
+      { name: "สบู่", amount: 759000, value: 26, color: "#EA580C" },
+      { name: "โปรโมชั่น", amount: 672000, value: 23, color: "#10B981" },
+      { name: "แชมพู", amount: 321000, value: 11, color: "#8B5CF6" },
     ];
   }, [rawDashData]);
 
@@ -471,10 +536,12 @@ function Dashboard() {
     }
 
     return [
-      { region: "กรุงเทพฯ", fullRegion: "กรุงเทพและปริมณฑล", value: 1492 },
-      { region: "ภาคอีสาน", fullRegion: "ภาคตะวันออกเฉียงเหนือ", value: 796 },
-      { region: "ภาคตะวันออก", fullRegion: "ภาคตะวันออก", value: 594 },
-      { region: "ภาคกลาง", fullRegion: "ภาคกลาง", value: 585 },
+      { region: "กรุงเทพฯและปริมณฑล", fullRegion: "กรุงเทพและปริมณฑล", value: 450 },
+      { region: "ภาคตะวันออก", fullRegion: "ภาคตะวันออก", value: 650 },
+      { region: "ภาคใต้", fullRegion: "ภาคใต้", value: 950 },
+      { region: "ภาคเหนือ", fullRegion: "ภาคเหนือ", value: 1450 },
+      { region: "ภาคกลาง", fullRegion: "ภาคกลาง", value: 2000 },
+      { region: "ภาคอีสาน", fullRegion: "ภาคตะวันออกเฉียงเหนือ", value: 1450 },
     ];
   }, [rawDashData]);
 
@@ -489,25 +556,27 @@ function Dashboard() {
       (p) => Number(p.stockQuantity) <= 15 || p.status?.includes("หมด") || p.status?.includes("ต่ำมาก")
     );
 
-    const urgentCount = urgentItems.length || 8;
+    const urgentCount = (urgentItems.length > 0 ? urgentItems.length : alertList.length) || 3;
 
     if (alertList.length > 0) {
-      // Include all urgent alert items so user can scroll and manage all of them
       const targetList = urgentItems.length > 0 ? urgentItems : alertList;
       const selected = targetList.map((p, idx) => {
         const count = Number(p.stockQuantity || 0);
         let status = p.status || "ใกล้หมด";
         let bgClass = "bg-[#FEFCE8] border-[#FEF08A]";
         let badgeClass = "bg-[#FEF9C3] text-[#CA8A04]";
+        let barClass = "bg-[#EAB308]";
 
         if (count === 0 || status.includes("หมด")) {
           status = "หมดสต็อก";
           bgClass = "bg-[#FFF5F5] border-[#FED7D7]";
           badgeClass = "bg-[#FEE2E2] text-[#EF4444]";
+          barClass = "bg-[#EF4444]";
         } else if (count <= 8 || status.includes("ต่ำมาก")) {
           status = "เหลือน้อยมาก";
           bgClass = "bg-[#FFF9F2] border-[#FEEBC8]";
           badgeClass = "bg-[#FFEDD5] text-[#EA580C]";
+          barClass = "bg-[#EA580C]";
         }
 
         return {
@@ -518,6 +587,7 @@ function Dashboard() {
           image: p.imageUrl || soapImg,
           bgClass,
           badgeClass,
+          barClass,
         };
       });
 
@@ -525,65 +595,69 @@ function Dashboard() {
     }
 
     return {
-      urgentCount: 8,
+      urgentCount: 3,
       stockAlertCards: [
         {
           id: 69,
-          name: "สบู่สมุนไพร มะม่วงหาว มะนาวโห่ ลดฝ้า กระ สิวที่หลัง",
+          name: "สบู่สมุนไพรว่านหางจระเข้",
           status: "หมดสต็อก",
           count: 0,
           image: "https://pccaovffcqixakzwjjge.supabase.co/storage/v1/object/products/1783764252056_____2.png",
           bgClass: "bg-[#FFF5F5] border-[#FED7D7]",
           badgeClass: "bg-[#FEE2E2] text-[#EF4444]",
+          barClass: "bg-[#EF4444]",
         },
         {
           id: 30,
-          name: "น้ำมะม่วงหาวมะนาวโห่สกัดเข้มข้น ไม่มีน้ำตาล",
+          name: "แชมพูสมุนไพรอัญชัน",
           status: "เหลือน้อยมาก",
-          count: 8,
+          count: 6,
           image: "https://pccaovffcqixakzwjjge.supabase.co/storage/v1/object/products/1773759784192_1.webp",
           bgClass: "bg-[#FFF9F2] border-[#FEEBC8]",
           badgeClass: "bg-[#FFEDD5] text-[#EA580C]",
+          barClass: "bg-[#EA580C]",
         },
         {
           id: 24,
-          name: "น้ำมะม่วงหาวมะนาวโห่ สูตรไม่มีน้ำตาล 30 ขวด ตราพัดทอง",
-          status: "เหลือน้อยมาก",
-          count: 8,
+          name: "น้ำมันหอมระเหยไม้",
+          status: "ใกล้หมด",
+          count: 12,
           image: "https://pccaovffcqixakzwjjge.supabase.co/storage/v1/object/products/1773756661709_th-11134207-7r98x-ltdl91ac11a502.webp",
-          bgClass: "bg-[#FFF9F2] border-[#FEEBC8]",
-          badgeClass: "bg-[#FFEDD5] text-[#EA580C]",
+          bgClass: "bg-[#FEFCE8] border-[#FEF08A]",
+          badgeClass: "bg-[#FEF9C3] text-[#CA8A04]",
+          barClass: "bg-[#EAB308]",
         },
       ],
     };
   }, [rawDashData]);
 
   // =========================================================================
-  // 8. รีวิวจากลูกค้า (Customer Reviews) [จริง: สัดส่วน %, คะแนนเฉลี่ย 4.2 / Mockup: จำนวน 2,381 รีวิว]
+  // 8. รีวิวจากลูกค้า (Customer Reviews) [จริง: สัดส่วน %, คะแนนเฉลี่ย 4.1 / Mockup: จำนวน 2,381 รีวิว]
   // =========================================================================
   const { avgRatingDisplay, reviewsBreakdown } = useMemo(() => {
     const reviewsList = rawDashData?.reviews || [];
 
+    const ratingMeta = [
+      { score: 5, label: "ดีเยี่ยม", color: "#10B981" },
+      { score: 4, label: "ดี", color: "#34D399" },
+      { score: 3, label: "กลาง", color: "#FBBF24" },
+      { score: 2, label: "แย่", color: "#FB923C" },
+      { score: 1, label: "แย่ที่สุด", color: "#EF4444" },
+    ];
+
     if (reviewsList.length > 0) {
-      // In the response, reviewScore is already the percentage (e.g. 58.62 for 5 stars)
       const weightedSum = reviewsList.reduce((acc, r) => acc + (r.score * (r.reviewScore || 0)), 0);
       const totalPct = reviewsList.reduce((acc, r) => acc + (r.reviewScore || 0), 0) || 100;
       const avg = (weightedSum / totalPct).toFixed(1);
 
-      const ratingMeta = [
-        { score: 5, label: "ดีเยี่ยม", color: "#10B981" },
-        { score: 4, label: "ดี", color: "#06B6D4" },
-        { score: 3, label: "กลาง", color: "#EAB308" },
-        { score: 2, label: "แย่", color: "#F97316" },
-        { score: 1, label: "แย่ที่สุด", color: "#EF4444" },
-      ];
-
       const breakdown = ratingMeta.map((meta) => {
         const match = reviewsList.find((r) => r.score === meta.score);
-        const percent = match ? Number((match.reviewScore || 0).toFixed(1)) : 0;
+        const percent = match ? Math.round(match.reviewScore || 0) : 0;
+        const count = Math.round((percent / 100) * 2381);
         return {
           label: meta.label,
           percent,
+          count,
           color: meta.color,
         };
       });
@@ -592,13 +666,13 @@ function Dashboard() {
     }
 
     return {
-      avgRatingDisplay: "4.2",
+      avgRatingDisplay: "4.1",
       reviewsBreakdown: [
-        { label: "ดีเยี่ยม", percent: 58.6, color: "#10B981" },
-        { label: "ดี", percent: 13.8, color: "#06B6D4" },
-        { label: "กลาง", percent: 20.7, color: "#EAB308" },
-        { label: "แย่", percent: 3.5, color: "#F97316" },
-        { label: "แย่ที่สุด", percent: 3.5, color: "#EF4444" },
+        { label: "ดีเยี่ยม", percent: 78, count: 1850, color: "#10B981" },
+        { label: "ดี", percent: 13, count: 300, color: "#34D399" },
+        { label: "กลาง", percent: 4, count: 100, color: "#FBBF24" },
+        { label: "แย่", percent: 2, count: 50, color: "#FB923C" },
+        { label: "แย่ที่สุด", percent: 1, count: 31, color: "#EF4444" },
       ],
     };
   }, [rawDashData]);
@@ -623,12 +697,12 @@ function Dashboard() {
 
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-sm font-bold text-gray-900">ยอดขายตามภูมิภาค</h2>
+              <h2 className="text-sm font-bold text-gray-900">ภาพรวมร้านค้า</h2>
               <p className="text-xs text-gray-400 mt-0.5">ข้อมูลทุกส่วนปรับตามช่วงเวลาที่เลือก</p>
             </div>
 
             {/* Time Period Filter Pills */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 bg-gray-100/80 p-1 rounded-xl">
               {(['สัปดาห์', 'เดือน', 'ไตรมาส', 'ปี'] as const).map((period) => {
                 const isActive = selectedPeriod === period;
                 return (
@@ -636,10 +710,10 @@ function Dashboard() {
                     key={period}
                     type="button"
                     onClick={() => setSelectedPeriod(period)}
-                    className={`cursor-pointer px-3.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    className={`cursor-pointer px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       isActive
                         ? 'bg-[#1E293B] text-white shadow-sm'
-                        : 'bg-[#F1F5F9] text-gray-600 hover:bg-gray-200'
+                        : 'text-gray-600 hover:bg-gray-200'
                     }`}
                   >
                     {period}
@@ -738,7 +812,7 @@ function Dashboard() {
                       onChange={(e) => setYearRangeStart(e.target.value)}
                       className="w-full appearance-none bg-[#F1F5F9] hover:bg-[#E2E8F0] border-0 rounded-xl py-2 pl-3.5 pr-7 text-xs font-medium text-gray-700 focus:outline-none cursor-pointer transition-colors truncate"
                     >
-                      {Object.keys(YEARLY_MOCK_DATA).map((yr) => (
+                      {AVAILABLE_YEARS.map((yr) => (
                         <option key={yr} value={yr}>
                           ปี {yr}
                         </option>
@@ -747,7 +821,7 @@ function Dashboard() {
                     <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
 
-                  <span className="text-xs text-gray-400 font-semibold px-0.5">-</span>
+                  <span className="text-xs text-gray-400 font-medium px-1">ถึง</span>
 
                   {/* End Year Dropdown */}
                   <div className="relative w-[100px] sm:w-[105px]">
@@ -756,7 +830,7 @@ function Dashboard() {
                       onChange={(e) => setYearRangeEnd(e.target.value)}
                       className="w-full appearance-none bg-[#F1F5F9] hover:bg-[#E2E8F0] border-0 rounded-xl py-2 pl-3.5 pr-7 text-xs font-medium text-gray-700 focus:outline-none cursor-pointer transition-colors truncate"
                     >
-                      {Object.keys(YEARLY_MOCK_DATA).map((yr) => (
+                      {AVAILABLE_YEARS.map((yr) => (
                         <option key={yr} value={yr}>
                           ปี {yr}
                         </option>
@@ -774,9 +848,11 @@ function Dashboard() {
                       onChange={(e) => setSide1Selection(e.target.value)}
                       className="w-full appearance-none bg-[#F1F5F9] hover:bg-[#E2E8F0] border-0 rounded-xl py-2 pl-3.5 pr-7 text-xs font-medium text-gray-700 focus:outline-none cursor-pointer transition-colors truncate"
                     >
-                      <option value="2024">ปี 2024</option>
-                      <option value="2025">ปี 2025</option>
-                      <option value="2026">ปี 2026</option>
+                      {AVAILABLE_YEARS.map((yr) => (
+                        <option key={yr} value={yr}>
+                          ปี {yr}
+                        </option>
+                      ))}
                     </select>
                     <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
@@ -790,9 +866,11 @@ function Dashboard() {
                       onChange={(e) => setSide2Selection(e.target.value)}
                       className="w-full appearance-none bg-[#F1F5F9] hover:bg-[#E2E8F0] border-0 rounded-xl py-2 pl-3.5 pr-7 text-xs font-medium text-gray-700 focus:outline-none cursor-pointer transition-colors truncate"
                     >
-                      <option value="2024">ปี 2024</option>
-                      <option value="2025">ปี 2025</option>
-                      <option value="2026">ปี 2026</option>
+                      {AVAILABLE_YEARS.map((yr) => (
+                        <option key={yr} value={yr}>
+                          ปี {yr}
+                        </option>
+                      ))}
                     </select>
                     <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
@@ -936,15 +1014,15 @@ function Dashboard() {
             <div>
               <div className="mb-4">
                 <h3 className="font-bold text-gray-900 text-base">สินค้าขายดี</h3>
-                <p className="text-xs text-gray-400 mt-0.5">อันดับสินค้าตามยอดขาย - เดือนนี้</p>
+                <p className="text-xs text-gray-400 mt-0.5">อันดับสินค้าตามยอดขาย · {periodText}</p>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-gray-100 text-gray-400 font-normal">
-                      <th className="pb-3 w-6 pr-2 font-normal">#</th>
-                      <th className="pb-3 pr-2 font-normal">สินค้า</th>
+                      <th className="pb-3 w-7 pr-2 font-normal">#</th>
+                      <th className="pb-3 pr-4 font-normal min-w-[240px]">สินค้า</th>
                       <th className="pb-3 px-2.5 text-right font-normal whitespace-nowrap">ราคา/ชิ้น</th>
                       <th className="pb-3 px-2.5 text-right font-normal whitespace-nowrap">จำนวนขาย</th>
                       <th className="pb-3 px-2.5 text-right font-normal whitespace-nowrap">รายได้</th>
@@ -955,16 +1033,16 @@ function Dashboard() {
                     {topProductsList.map((product, idx) => (
                       <tr key={product.id || idx} className="hover:bg-gray-50/50 transition-colors">
                         <td className="py-3.5 pr-2 font-medium text-gray-500">{idx + 1}</td>
-                        <td className="py-3.5 pr-2">
+                        <td className="py-3.5 pr-4 min-w-[240px]">
                           <div className="flex items-center gap-2.5">
                             <img
                               src={product.image}
                               alt={product.name}
                               className="w-10 h-10 rounded-lg object-cover border border-gray-100 shrink-0"
                             />
-                            <div className="flex flex-col gap-0.5 min-w-0 max-w-[160px] sm:max-w-[200px]">
-                              <span className="font-medium text-gray-900 truncate" title={product.name}>
-                                {product.displayName || product.name}
+                            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                              <span className="font-medium text-gray-900 leading-snug break-words">
+                                {product.name}
                               </span>
                               {product.categoryBadge && (
                                 <span className={`inline-block w-fit px-1.5 py-0.5 rounded text-[10px] font-medium border ${product.badgeColor}`}>
@@ -983,11 +1061,8 @@ function Dashboard() {
                         <td className="py-3.5 px-2.5 text-right font-semibold text-gray-900 whitespace-nowrap">
                           {product.revenueDisplay}
                         </td>
-                        <td className="py-3.5 pl-2.5 text-right whitespace-nowrap">
-                          <span className="inline-flex items-center justify-end gap-1 text-gray-800 font-medium">
-                            <Star className="w-3.5 h-3.5 fill-amber-400 stroke-amber-400 text-amber-400" />
-                            {product.rating}
-                          </span>
+                        <td className="py-3.5 pl-2.5 text-right font-medium text-gray-700 whitespace-nowrap">
+                          {product.rating}
                         </td>
                       </tr>
                     ))}
@@ -998,14 +1073,14 @@ function Dashboard() {
           </div>
 
           {/* Card 2: ช่องทางการขาย (3/12 cols) */}
-          <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-            <div>
+          <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex flex-col">
+            <div className="mb-2">
               <h3 className="font-bold text-gray-900 text-base">ช่องทางการขาย</h3>
-              <p className="text-xs text-gray-400 mt-0.5">สัดส่วนยอดขายตามช่องทาง (%)</p>
+              <p className="text-xs text-gray-400 mt-0.5">สัดส่วนยอดขายตามช่องทาง</p>
             </div>
 
             {/* Donut Chart with Center Revenue Label */}
-            <div className="h-44 w-full relative my-3 flex items-center justify-center">
+            <div className="h-44 w-full relative my-2 flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -1014,6 +1089,8 @@ function Dashboard() {
                     cy="50%"
                     innerRadius={50}
                     outerRadius={68}
+                    startAngle={90}
+                    endAngle={-270}
                     paddingAngle={0}
                     dataKey="value"
                     stroke="none"
@@ -1026,38 +1103,41 @@ function Dashboard() {
               </ResponsiveContainer>
 
               {/* Center Text inside Donut Hole */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-xs font-bold text-gray-800 tracking-tight">
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-sm sm:text-base font-bold text-gray-900 tracking-tight leading-tight">
                   {totalRevenueDisplay}
+                </span>
+                <span className="text-xs font-semibold text-gray-800 mt-1">
+                  ยอดขายรวม
                 </span>
               </div>
             </div>
 
             {/* Legend List */}
-            <div className="space-y-2.5 text-xs pt-1">
+            <div className="space-y-2.5 text-xs pt-2">
               {salesChannelData.map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                    <span className="text-gray-600 font-medium truncate">
+                    <span className="text-gray-700 font-medium truncate">
                       {item.name} · ฿ {item.amount.toLocaleString()}
                     </span>
                   </div>
-                  <span className="font-medium text-gray-600 pl-2 shrink-0">{item.value}%</span>
+                  <span className="font-semibold text-gray-700 pl-2 shrink-0">{item.value}%</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Card 3: สัดส่วนหมวดหมู่ (3/12 cols) */}
-          <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-            <div>
-              <h3 className="font-bold text-gray-900 text-base">สัดส่วนหมวดหมู่</h3>
-              <p className="text-xs text-gray-400 mt-0.5">สัดส่วนยอดขายตามหมวดหมู่ (%)</p>
+          {/* Card 3: หมวดหมู่ตามยอดขาย (3/12 cols) */}
+          <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex flex-col">
+            <div className="mb-2">
+              <h3 className="font-bold text-gray-900 text-base">หมวดหมู่ตามยอดขาย</h3>
+              <p className="text-xs text-gray-400 mt-0.5">สัดส่วนยอดขายตามหมวดหมู่</p>
             </div>
 
             {/* Donut Chart with Center Revenue Label */}
-            <div className="h-44 w-full relative my-3 flex items-center justify-center">
+            <div className="h-44 w-full relative my-2 flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -1066,6 +1146,8 @@ function Dashboard() {
                     cy="50%"
                     innerRadius={50}
                     outerRadius={68}
+                    startAngle={90}
+                    endAngle={-270}
                     paddingAngle={0}
                     dataKey="value"
                     stroke="none"
@@ -1078,24 +1160,27 @@ function Dashboard() {
               </ResponsiveContainer>
 
               {/* Center Text inside Donut Hole */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-xs font-bold text-gray-800 tracking-tight">
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-sm sm:text-base font-bold text-gray-900 tracking-tight leading-tight">
                   {totalRevenueDisplay}
+                </span>
+                <span className="text-xs font-semibold text-gray-800 mt-1">
+                  ยอดขายรวม
                 </span>
               </div>
             </div>
 
             {/* Legend List */}
-            <div className="space-y-2 text-xs pt-1">
+            <div className="space-y-2.5 text-xs pt-2">
               {categoryRatioData.map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                    <span className="text-gray-600 font-medium truncate max-w-[140px]">
+                    <span className="text-gray-700 font-medium truncate max-w-[140px]">
                       {item.name} · ฿ {item.amount.toLocaleString()}
                     </span>
                   </div>
-                  <span className="font-medium text-gray-600 pl-2 shrink-0">{item.value}%</span>
+                  <span className="font-semibold text-gray-700 pl-2 shrink-0">{item.value}%</span>
                 </div>
               ))}
             </div>
@@ -1104,12 +1189,12 @@ function Dashboard() {
         </div>
 
         {/* ========================================================================= */}
-        {/* 4. ROW 3: ยอดขายตามภูมิภาค, แจ้งเตือนสต็อกสินค้า, รีวิวจากลูกค้า              */}
+        {/* 4. ROW 3: ยอดขายตามภูมิภาค & รีวิวจากลูกค้า                                    */}
         {/* ========================================================================= */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          {/* Card 1: ยอดขายตามภูมิภาค (6/12 cols) */}
-          <div className="lg:col-span-6 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex flex-col">
+          {/* Card 1: ยอดขายตามภูมิภาค (8/12 cols) */}
+          <div className="lg:col-span-8 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex flex-col">
             <h3 className="font-bold text-gray-900 text-base mb-2">ยอดขายตามภูมิภาค</h3>
 
             {/* Vertical Bar Chart matching the mock screenshot */}
@@ -1124,8 +1209,8 @@ function Dashboard() {
                     tickLine={false}
                   />
                   <YAxis
-                    ticks={[0, 500, 1000, 1500, 2000, 2500]}
-                    domain={[0, 2500]}
+                    ticks={[0, 500, 1000, 1500, 2000]}
+                    domain={[0, 2200]}
                     tick={{ fill: '#94A3B8', fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
@@ -1143,7 +1228,7 @@ function Dashboard() {
                     dataKey="value"
                     fill="#3B82F6"
                     radius={[4, 4, 0, 0]}
-                    maxBarSize={40}
+                    maxBarSize={44}
                   >
                     <LabelList
                       dataKey="value"
@@ -1160,69 +1245,8 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* Card 2: แจ้งเตือนสต็อกสินค้า (3/12 cols) */}
-          <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-bold text-gray-900 text-base">แจ้งเตือนสต็อกสินค้า</h3>
-                  <p className="text-[11px] text-gray-400 mt-0.5">แสดงเฉพาะสินค้าที่เหลือน้อยกว่า 15 ชิ้น</p>
-                </div>
-                <span className="text-[11px] font-medium text-red-500 whitespace-nowrap pl-1">
-                  {urgentCount} รายการต้องจัดการ
-                </span>
-              </div>
-
-              {/* Alert Items stacked with smooth scroll */}
-              <div className="space-y-3 max-h-[290px] overflow-y-auto pr-1.5 scrollbar-thin">
-                {stockAlertCards.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => handleManageProduct(item)}
-                    className={`group relative rounded-xl p-3 border flex items-center justify-between gap-2.5 transition-all hover:shadow-md cursor-pointer ${item.bgClass}`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-10 h-10 rounded-lg object-cover border border-white/80 shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <span className="font-semibold text-gray-800 text-xs block truncate" title={item.name}>
-                          {item.name}
-                        </span>
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium mt-1 ${item.badgeClass}`}>
-                          {item.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 flex items-center justify-end">
-                      {/* Default: Quantity Text */}
-                      <span className="text-xs font-semibold text-gray-700 whitespace-nowrap group-hover:hidden transition-all">
-                        {item.count} ชิ้น
-                      </span>
-
-                      {/* Hover: Manage Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleManageProduct(item);
-                        }}
-                        className="hidden group-hover:inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1 rounded-lg shadow-sm transition-all cursor-pointer"
-                      >
-                        จัดการ
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: รีวิวจากลูกค้า (3/12 cols) */}
-          <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+          {/* Card 2: รีวิวจากลูกค้า (4/12 cols) */}
+          <div className="lg:col-span-4 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex flex-col justify-between">
             <div>
               <h3 className="font-bold text-gray-900 text-base">รีวิวจากลูกค้า</h3>
               <p className="text-xs text-gray-400 mt-0.5">2,381 รีวิว</p>
@@ -1248,7 +1272,7 @@ function Dashboard() {
             </div>
 
             {/* Progress Bars Breakdown */}
-            <div className="space-y-2 text-xs">
+            <div className="space-y-2.5 text-xs">
               {reviewsBreakdown.map((r, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <span className="w-12 text-gray-500 font-normal shrink-0 text-right">
@@ -1260,14 +1284,86 @@ function Dashboard() {
                       style={{ width: `${r.percent}%`, backgroundColor: r.color }}
                     />
                   </div>
-                  <span className="text-[11px] text-gray-500 font-normal shrink-0 text-right min-w-[50px]">
-                    {r.percent}%
+                  <span className="text-[11px] text-gray-500 font-normal shrink-0 text-right min-w-[70px]">
+                    {r.count ? `${r.count.toLocaleString()} (${r.percent}%)` : `${r.percent}%`}
                   </span>
                 </div>
               ))}
             </div>
           </div>
 
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 5. ROW 4: แจ้งเตือนสต็อกสินค้า (ย้ายมาไว้ด้านล่าง เต็มความกว้าง)                     */}
+        {/* ========================================================================= */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex flex-col">
+          <div className="flex flex-wrap justify-between items-center mb-5 gap-2">
+            <div>
+              <h3 className="font-bold text-gray-900 text-base">แจ้งเตือนสต็อกสินค้า</h3>
+              <p className="text-xs text-gray-400 mt-0.5">แสดงเฉพาะสินค้าที่เหลือไม่เกิน 15 ชิ้น</p>
+            </div>
+            <span className="text-xs font-semibold text-red-500 whitespace-nowrap">
+              {urgentCount} รายการต้องจัดการ
+            </span>
+          </div>
+
+          {/* Horizontal Grid of Low Stock Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {stockAlertCards.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => handleManageProduct(item)}
+                className={`group relative rounded-2xl p-4 border flex flex-col justify-between transition-all hover:shadow-md cursor-pointer ${item.bgClass}`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-12 h-12 rounded-xl object-cover border border-white/80 shrink-0 shadow-sm"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <span className="font-semibold text-gray-800 text-xs sm:text-sm block truncate" title={item.name}>
+                      {item.name}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2 min-h-[28px]">
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${item.badgeClass}`}>
+                      {item.status}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-700">
+                        {item.count} ชิ้น
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleManageProduct(item);
+                        }}
+                        className="hidden group-hover:inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1 rounded-lg shadow-sm transition-all cursor-pointer"
+                      >
+                        จัดการ
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Stock Level Progress Line Bar */}
+                  <div className="w-full bg-black/5 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${item.barClass || 'bg-amber-500'}`}
+                      style={{
+                        width: `${item.count === 0 ? 0 : Math.min(100, Math.max(10, (item.count / 15) * 100))}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
       </div>
@@ -1282,7 +1378,7 @@ function Dashboard() {
         onSuccess={() => {
           setIsEditModalOpen(false);
           setEditingProduct(null);
-          dispatch(getOwnerDashboard());
+          dispatch(getOwnerDashboard(queryParams));
         }}
         product={editingProduct}
       />
