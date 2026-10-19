@@ -7,6 +7,7 @@ import type {
   OwnerState,
   GetUserManagementParams,
   UserManagementResponse,
+  GetDashboardParams,
 } from "../../types/owner";
 
 const ROLE_PRIORITY: Record<string, number> = {
@@ -42,8 +43,8 @@ export const getStore = createAsyncThunk("owner/getStore", async () => {
 
 export const getOwnerDashboard = createAsyncThunk(
   "owner/getOwnerDashboard",
-  async () => {
-    const res = await DashboardService.getOwnerDashboard();
+  async (params?: GetDashboardParams) => {
+    const res = await DashboardService.getOwnerDashboard(params);
     return res?.data || res;
   }
 );

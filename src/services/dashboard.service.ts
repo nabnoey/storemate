@@ -1,10 +1,11 @@
 import api from "./api";
+import type { GetDashboardParams } from "../types/owner";
 
 const OWNER_API = import.meta.env.VITE_OWNER_API || "owner";
 
 export const DashboardService = {
-  getOwnerDashboard: async () => {
-    const response = await api.get(`${OWNER_API}/dashboard`);
+  getOwnerDashboard: async (params?: GetDashboardParams) => {
+    const response = await api.get(`${OWNER_API}/dashboard`, { params });
     return response.data;
   },
   
